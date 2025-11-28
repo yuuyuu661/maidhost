@@ -1,5 +1,13 @@
 let adminOK = false;
-let currentTab = "shift-host";
+let currentTab = "shift-host";  // 初期タブはホスト
+
+window.onload = () => {
+  // 初期表示は必ず shift-host
+  switchTab("shift-host");
+
+  // パスワードパネルは絶対に初期表示しない
+  document.getElementById("authPanel").classList.add("hidden");
+};
 let editingShift = null;
 let orderLog = [];
 
