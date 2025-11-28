@@ -178,6 +178,12 @@ app.delete("/api/menu/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ▼ メニュー削除
+app.delete("/api/menu/:id", async (req, res) => {
+  await pool.query(`DELETE FROM menus WHERE id=$1`, [req.params.id]);
+  res.json({ ok: true });
+});
+
 /* -------------------------------------
    ▼ 注文（端末共通で保持）
 ------------------------------------- */
