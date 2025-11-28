@@ -1,23 +1,23 @@
 body {
   font-family: sans-serif;
-  margin: 0;
-  padding: 0;
   background: #fafafa;
+  margin: 0;
 }
 
 #tabs {
   background: #eee;
-  padding: 8px;
+  padding: 10px;
   display: flex;
-  gap: 6px;
+  gap: 10px;
   overflow-x: auto;
 }
 
 #tabs .tab {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border: none;
   background: #ddd;
   border-radius: 5px;
+  white-space: nowrap;
 }
 
 #tabs .tab.active {
@@ -42,6 +42,7 @@ body {
   justify-content: center;
   align-items: center;
 }
+
 .popup {
   background: white;
   padding: 20px;
@@ -55,8 +56,28 @@ body {
   margin-top: 10px;
 }
 
+.shiftTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.shiftTable th,
+.shiftTable td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+
+.icon {
+  width: 60px;
+  height: auto;
+  border-radius: 4px;
+}
+
 /* ▼ スマホ対応 */
 @media (max-width: 600px) {
-  h2 { font-size: 20px; }
+  .icon { width: 40px; }
+  h2 { font-size: 18px; }
   table { font-size: 12px; }
 }
