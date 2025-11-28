@@ -95,8 +95,8 @@ function renderShift(type, data, adminMode) {
           : document.getElementById("shiftMaidTable"));
 
   const times = [
-    "20:00-20:30","20:30-21:00","21:00-21:30",
-    "21:30-22:00","22:00-22:30","22:30-23:00"
+    "20:30-20:50","20:50-21:10","21:10-21:30",
+    "21:30-21:50","21:50-22:10","22:10-22:30"
   ];
 
   let html = `<table class="shiftTable"><tr><th>${new Date().toLocaleDateString()}</th>`;
