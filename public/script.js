@@ -1,16 +1,19 @@
-/* ----------------------------------------
-   共通
----------------------------------------- */
+/* =========================================================
+   基本設定
+========================================================= */
 const API = "";
-let currentShiftType = "host"; // 注文画面で使用
+let currentShiftType = "host";
 let currentShiftId = null;
 let currentShiftDate = null;
 let currentShiftSlot = null;
 let currentShiftUserName = null;
 
-/* ----------------------------------------
+const ADMIN_PASSWORD = "";  // ← server.js から埋め込まれる（安全）
+
+
+/* =========================================================
    タブ切り替え
----------------------------------------- */
+========================================================= */
 const tabs = document.querySelectorAll(".tab");
 const panels = document.querySelectorAll(".panel");
 
@@ -18,12 +21,13 @@ tabs.forEach(tab => {
   tab.addEventListener("click", () => {
     const target = tab.dataset.panel;
 
+    // タブ切り替え
     tabs.forEach(t => t.classList.remove("active"));
     panels.forEach(p => p.classList.remove("active"));
-
     tab.classList.add("active");
     document.getElementById("panel-" + target).classList.add("active");
 
+    // パネルごとの動作
     if (target === "shift-host") loadShift("host");
     if (target === "shift-maid") loadShift("maid");
     if (target === "users") loadUserList();
@@ -31,12 +35,15 @@ tabs.forEach(tab => {
   });
 });
 
-// 初期表示
-tabs[0].click();
+// 🔥初期表示はホストシフト
+window.addEventListener("load", () => {
+  tabs[0].click();
+});
 
-/* ----------------------------------------
+
+/* =========================================================
    管理パスワードチェック
----------------------------------------- */
+========================================================= */
 let adminOK_users = false;
 let adminOK_menu = false;
 
@@ -46,6 +53,7 @@ document.getElementById("unlock-users").onclick = () => {
     adminOK_users = true;
     document.getElementById("admin-lock-users").classList.add("hidden");
     document.getElementById("users-content").classList.remove("hidden");
+    loadUserList();
   } else {
     alert("パスワードが違います");
   }
@@ -63,19 +71,18 @@ document.getElementById("unlock-menu").onclick = () => {
   }
 };
 
-/* ----------------------------------------
+
+/* =========================================================
    ユーザー登録
----------------------------------------- */
+========================================================= */
 document.getElementById("u-save").onclick = async () => {
-  if (!adminOK_users) return alert("認証が必要です");
+  if (!adminOK_users) return alert("管理認証が必要です");
 
   const name = document.getElementById("u-name").value;
   const type = document.getElementById("u-type").value;
   const file = document.getElementById("u-icon").files[0];
 
-  if (!name || !file) {
-    return alert("名前とアイコンは必須です");
-  }
+  if (!name || !file) return alert("名前とアイコンを入力してください");
 
   const fd = new FormData();
   fd.append("name", name);
@@ -86,34 +93,66 @@ document.getElementById("u-save").onclick = async () => {
   const json = await res.json();
 
   if (json.ok) {
-    alert("登録完了");
+    alert("登録完了しました");
     loadUserList();
   } else {
-    alert("登録に失敗");
+    alert("登録失敗");
   }
 };
 
+
+/* =========================================================
+   ユーザー一覧・削除機能
+========================================================= */
 async function loadUserList() {
   if (!adminOK_users) return;
 
-  const res = await fetch("/api/users?type=host");
-  const host = await res.json();
-
-  const res2 = await fetch("/api/users?type=maid");
-  const maid = await res2.json();
+  const host = await (await fetch("/api/users?type=host")).json();
+  const maid = await (await fetch("/api/users?type=maid")).json();
 
   const area = document.getElementById("u-list");
   area.innerHTML = `
-    <h4>ホスト</h4>
-    ${host.map(u => `<div>${u.id}：${u.name}</div>`).join("")}
-    <h4>メイド</h4>
-    ${maid.map(u => `<div>${u.id}：${u.name}</div>`).join("")}
+    <h4>ホスト一覧</h4>
+    ${host.map(u => userRow(u)).join("")}
+    <h4>メイド一覧</h4>
+    ${maid.map(u => userRow(u)).join("")}
   `;
 }
 
-/* ----------------------------------------
-   シフト表読み込み
----------------------------------------- */
+function userRow(u) {
+  return `
+    <div style="display:flex;align-items:center;margin:4px 0;">
+      <img src="${u.icon_url}" width="40" style="margin-right:8px;border-radius:4px;">
+      <div style="flex:1;">${u.id}. ${u.name}</div>
+      <button onclick="deleteUser(${u.id})" style="background:#ff4444;color:white;border:none;padding:4px 8px;border-radius:4px;">
+        削除
+      </button>
+    </div>
+  `;
+}
+
+window.deleteUser = async (id) => {
+  if (!confirm("削除しますか？")) return;
+
+  const res = await fetch("/api/users/delete", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "x-admin-pass":ADMIN_PASSWORD },
+    body: JSON.stringify({ id })
+  });
+
+  const json = await res.json();
+  if (json.ok) {
+    alert("削除しました");
+    loadUserList();
+  } else {
+    alert("削除失敗");
+  }
+};
+
+
+/* =========================================================
+   シフト読み込み
+========================================================= */
 async function loadShift(type) {
   currentShiftType = type;
 
@@ -121,71 +160,63 @@ async function loadShift(type) {
   const res = await fetch(`/api/shifts?type=${type}&date=${date}`);
   const json = await res.json();
 
-  const users = json.users;
-  const shifts = json.shifts;
+  const table = createShiftTable(json.users, json.shifts, date);
 
-  const table = createShiftTable(users, shifts, date);
-  document.getElementById("sh-" + type).innerHTML = "";
-  document.getElementById("sh-" + type).appendChild(table);
+  const target = document.getElementById(type === "host" ? "sh-host" : "sh-maid");
+  target.innerHTML = "";
+  target.appendChild(table);
 }
 
 function createShiftTable(users, shifts, date) {
   const times = [
-    "20:00-20:30",
-    "20:30-21:00",
-    "21:00-21:30",
-    "21:30-22:00",
-    "22:00-22:30",
-    "22:30-23:00"
+    "20:00-20:30", "20:30-21:00",
+    "21:00-21:30", "21:30-22:00",
+    "22:00-22:30", "22:30-23:00"
   ];
 
-  const t = document.createElement("table");
-  let html = "<tr><th>" + date + "</th>";
-
+  const table = document.createElement("table");
+  let html = `<tr><th>${date}</th>`;
   users.forEach(u => {
-    html += `<th><img src="${u.icon_url}" width="60"><br>${u.name}</th>`;
+    html += `<th><img src="${u.icon_url}"><br>${u.name}</th>`;
   });
   html += "</tr>";
 
   times.forEach(slot => {
     html += `<tr><td>${slot}</td>`;
+
     users.forEach(u => {
-      let s = shifts.find(x => x.user_id === u.id && x.time_slot === slot);
+      const s = shifts.find(s => s.user_id === u.id && s.time_slot === slot);
       let cls = "empty";
       let text = "";
 
       if (s) {
         if (s.status === "reserved") {
           cls = "reserved";
-          text = s.reserved_name;
-
-          // ←★ 注文ボタン
-          text += `<br><span class='order-btn' onclick="openOrder('${u.name}', '${slot}', '${date}', ${s.id})">注文</span>`;
-
+          text = s.reserved_name + `<br><span class='order-btn' onclick="openOrder('${u.name}','${slot}','${date}',${s.id})">注文</span>`;
         } else if (s.status === "x") {
           cls = "x";
           text = "X";
         }
       }
 
-      html += `<td class="${cls}" onclick="openEdit(${u.id}, '${slot}', '${date}')">${text}</td>`;
+      html += `<td class="${cls}" onclick="openEdit(${u.id},'${slot}','${date}')">${text}</td>`;
     });
+
     html += "</tr>";
   });
 
-  t.innerHTML = html;
-  return t;
+  table.innerHTML = html;
+  return table;
 }
 
-/* ----------------------------------------
-   編集ダイアログ
----------------------------------------- */
+
+/* =========================================================
+   シフト編集ダイアログ
+========================================================= */
 window.openEdit = (user_id, slot, date) => {
   if (!adminOK_users && !adminOK_menu) {
-    alert("管理パスワードが必要です（ユーザーかメニューで認証）");
-    return;
+    return alert("管理者認証が必要です");
   }
-
   showEditDialog(user_id, slot, date);
 };
 
@@ -205,7 +236,7 @@ function showEditDialog(user_id, slot, date) {
       </select><br><br>
 
       <label>予約者名</label><br>
-      <input id="ed-name" placeholder="名前"><br><br>
+      <input id="ed-name"><br><br>
 
       <label>管理パスワード</label><br>
       <input id="ed-pass" type="password"><br><br>
@@ -222,17 +253,14 @@ function showEditDialog(user_id, slot, date) {
 
   document.getElementById("ed-save").onclick = async () => {
     const pass = document.getElementById("ed-pass").value;
-    if (pass !== ADMIN_PASSWORD) return alert("パスワードが違います");
-
-    const status = document.getElementById("ed-status").value;
-    const name = document.getElementById("ed-name").value;
+    if (pass !== ADMIN_PASSWORD) return alert("パスワード違うよ");
 
     const body = {
       user_id,
       date,
       time_slot: slot,
-      status,
-      reserved_name: name,
+      status: document.getElementById("ed-status").value,
+      reserved_name: document.getElementById("ed-name").value,
       total_price: 0
     };
 
@@ -245,19 +273,24 @@ function showEditDialog(user_id, slot, date) {
     dialog.remove();
     loadShift(currentShiftType);
   };
-}
+};
 
-/* ----------------------------------------
+
+/* =========================================================
    注文機能
----------------------------------------- */
+========================================================= */
+let orderLog = [];
+
 window.openOrder = async (userName, slot, date, shift_id) => {
-  currentShiftId = shift_id;
+  currentShiftUserName = userName;
   currentShiftSlot = slot;
   currentShiftDate = date;
-  currentShiftUserName = userName;
+  currentShiftId = shift_id;
 
-  // 注文画面へ遷移
-  document.querySelector(`.tab[data-panel="order"]`).click();
+  orderLog = [];
+
+  // 注文タブへ移動
+  document.querySelector('.tab[data-panel="order"]').click();
 
   loadOrderMenus();
   loadOrderLog();
@@ -280,36 +313,27 @@ async function loadOrderMenus() {
   `).join("");
 }
 
-let orderLog = [];
-
 function addOrder(id, name, price) {
   const q = Number(prompt("個数？", "1"));
-  if (!q || q <= 0) return;
-
-  orderLog.push({
-    menu_id:id,
-    name,
-    price,
-    quantity:q,
-    total: price * q
-  });
-
+  if (!q) return;
+  orderLog.push({ menu_id:id, name, price, quantity:q, total:price*q });
   loadOrderLog();
 }
 
 function loadOrderLog() {
   const area = document.getElementById("order-log");
   area.innerHTML = orderLog.map(o => `
-    <div>${o.name} x ${o.quantity} = ${o.total}</div>
+    <div>${o.name} × ${o.quantity} = ${o.total}</div>
   `).join("");
 
   const sum = orderLog.reduce((a,b)=>a+b.total,0);
   area.innerHTML += `<hr>合計：${sum} rrc`;
 }
 
-/* ----------------------------------------
-   対応終了
----------------------------------------- */
+
+/* =========================================================
+   対応終了（CSV/JSON保存 & シフト金額反映）
+========================================================= */
 document.getElementById("order-finish").onclick = async () => {
   const sum = orderLog.reduce((a,b)=>a+b.total,0);
 
@@ -327,7 +351,9 @@ document.getElementById("order-finish").onclick = async () => {
     })
   });
 
-  // シフトの合計金額更新
+  alert("対応終了しました");
+
+  // シフト金額更新
   await fetch("/api/shifts/update", {
     method:"POST",
     headers:{ "Content-Type":"application/json", "x-admin-pass":ADMIN_PASSWORD },
@@ -341,29 +367,29 @@ document.getElementById("order-finish").onclick = async () => {
     })
   });
 
-  alert("対応終了しました");
-  orderLog = [];
   document.querySelector(`.tab[data-panel="shift-${currentShiftType}"]`).click();
 };
 
-/* ----------------------------------------
-   メニュー管理
----------------------------------------- */
+
+/* =========================================================
+   メニュー登録
+========================================================= */
+document.getElementById("menu-type-select").onchange = loadMenuUsers;
+
 async function loadMenuUsers() {
   if (!adminOK_menu) return;
-  const type = document.getElementById("menu-type-select").value;
 
-  const res = await fetch(`/api/users?type=${type}`);
-  const users = await res.json();
+  const type = document.getElementById("menu-type-select").value;
+  const users = await (await fetch(`/api/users?type=${type}`)).json();
 
   const sel = document.getElementById("menu-user-select");
   sel.innerHTML = users.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
+
+  loadMenuList();
 }
 
-document.getElementById("menu-type-select").onchange = loadMenuUsers;
-
 document.getElementById("m-save").onclick = async () => {
-  if (!adminOK_menu) return alert("認証が必要です");
+  if (!adminOK_menu) return alert("管理認証が必要です");
 
   const user_id = document.getElementById("menu-user-select").value;
   const name = document.getElementById("m-name").value;
@@ -385,22 +411,17 @@ document.getElementById("m-save").onclick = async () => {
 
 async function loadMenuList() {
   const user_id = document.getElementById("menu-user-select").value;
-  const res = await fetch(`/api/menu?user_id=${user_id}`);
-  const menus = await res.json();
+  const menus = await (await fetch(`/api/menu?user_id=${user_id}`)).json();
 
   document.getElementById("m-list").innerHTML =
     menus.map(m => `<div>${m.name}：${m.price}rrc</div>`).join("");
 }
 
-/* ----------------------------------------
-   当日日付
----------------------------------------- */
+
+/* =========================================================
+   今日の日付
+========================================================= */
 function getToday() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
-
-/* ----------------------------------------
-   パスワード（環境変数反映）
----------------------------------------- */
-const ADMIN_PASSWORD = "1234"; // ← 必要なら変更
