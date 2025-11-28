@@ -249,5 +249,3 @@ function loadMenuList(){
   });
 }
 
-// 初期表示
-switchTab("shift-host");
