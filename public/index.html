@@ -10,14 +10,22 @@
   <button class="tab" data-panel="order">注文</button>
 </div>
 
-<div id="panel-users" class="panel active">
-<h2>ユーザー管理</h2>
-<input id="u-name" placeholder="名前">
-<select id="u-type"><option value="host">ホスト</option><option value="maid">メイド</option></select>
-<input type="file" id="u-icon">
-<button id="u-save">登録</button>
-<div id="u-list"></div>
+<div id="panel-users" class="panel">
+  <h2>ユーザー管理</h2>
+
+  <h3>新規登録</h3>
+  <input id="u-name" placeholder="名前">
+  <select id="u-type">
+    <option value="host">ホスト</option>
+    <option value="maid">メイド</option>
+  </select>
+  <input type="file" id="u-icon">
+  <button id="u-save">登録</button>
+
+  <h3>登録済みユーザー</h3>
+  <div id="u-list"></div>
 </div>
+
 
 <div id="panel-shift-host" class="panel"><h2>シフト(ホスト)</h2><div id="sh-host"></div></div>
 <div id="panel-shift-maid" class="panel"><h2>シフト(メイド)</h2><div id="sh-maid"></div></div>
