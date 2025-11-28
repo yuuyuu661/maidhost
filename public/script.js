@@ -46,9 +46,13 @@ function loadShift(type, admin) {
 
   fetch(`/api/shifts?type=${type}&date=${date}`)
     .then(r => r.json())
-    .then(data => renderShift(type, data, admin));
+    .then(data => renderShift(type, data, admin))
+    .catch(e => console.error("shift load error", e));
 }
 
+/* -----------------------------
+   シフト描画
+----------------------------- */
 function renderShift(type, data, adminMode) {
   const target = adminMode
     ? (type === "host"
@@ -64,6 +68,7 @@ function renderShift(type, data, adminMode) {
   ];
 
   let html = `<table class="shiftTable"><tr><th>${new Date().toLocaleDateString()}</th>`;
+
   data.users.forEach(u => {
     const icon = u.icon_url || "/default.png";
     html += `<th>
@@ -71,6 +76,7 @@ function renderShift(type, data, adminMode) {
       <br>${u.name}
     </th>`;
   });
+
   html += "</tr>";
 
   times.forEach((slot, i) => {
@@ -78,36 +84,46 @@ function renderShift(type, data, adminMode) {
 
     data.users.forEach(u => {
       const cell = data.shifts.find(s => s.user_id === u.id && s.time_slot === i);
-      let bg = "#d8f5d0", text = "";
+      let bg = "#d8f5d0";
+      let text = "";
 
       if (cell) {
         if (cell.status === "reserved") {
           bg = "#fff6a8";
           text = `${cell.reserved_name}`;
+
           if (adminMode) {
             text += `<br><button class="orderBtn" data-type="${type}" data-user="${u.id}" data-slot="${i}">注文</button>`;
           }
+
         } else if (cell.status === "busy") {
           bg = "#f6b0b0";
           text = "X";
         }
       }
 
-      html += `<td style="background:${bg}" data-user="${u.id}" data-slot="${i}" class="cell">${text}</td>`;
+      html += `<td style="background:${bg}" class="cell" data-user="${u.id}" data-slot="${i}">${text}</td>`;
     });
 
     html += "</tr>";
   });
 
   html += "</table>";
+
   target.innerHTML = html;
 
+  /* -----------------------------
+     一般モード：クリックで編集
+  ----------------------------- */
   if (!adminMode) {
     document.querySelectorAll(".cell").forEach(cell => {
       cell.onclick = () => editShift(type, cell);
     });
   }
 
+  /* -----------------------------
+     管理モード：注文ボタンのみ
+  ----------------------------- */
   if (adminMode) {
     document.querySelectorAll(".orderBtn").forEach(btn => {
       btn.onclick = () => {
@@ -120,7 +136,7 @@ function renderShift(type, data, adminMode) {
 }
 
 /* -----------------------------
-   一般モード：枠編集
+   シフト編集（一般モード）
 ----------------------------- */
 function editShift(type, cell) {
   const user = cell.dataset.user;
@@ -143,7 +159,7 @@ function editShift(type, cell) {
   updateShift(user, type, slot, newStatus, reservedName);
 }
 
-function updateShift(user_id, type, slot, status, name) {
+function updateShift(user_id, type, slot, status, reserved_name) {
   const date = new Date().toISOString().slice(0,10);
 
   fetch(`/api/shifts/update`, {
@@ -154,13 +170,13 @@ function updateShift(user_id, type, slot, status, name) {
       date,
       time_slot: Number(slot),
       status,
-      reserved_name: name || ""
+      reserved_name
     })
   }).then(() => loadShift(type, false));
 }
 
 /* -----------------------------
-   注文メニュー
+   注文機能
 ----------------------------- */
 function loadOrderMenu() {
   fetch(`/api/menu?type=${editingShift.type}`)
@@ -186,15 +202,14 @@ function loadOrderMenu() {
 function addOrder(d) {
   orderLog.push({
     name: d.name,
-    price: Number(d.price),
-    qty: 1
+    price: Number(d.price)
   });
-
   renderOrderLog();
 }
 
 function renderOrderLog() {
-  let html = "", sum = 0;
+  let html = "";
+  let sum = 0;
 
   orderLog.forEach(o => {
     html += `${o.name} x1 = ${o.price}<br>`;
@@ -205,9 +220,6 @@ function renderOrderLog() {
   document.getElementById("orderSum").innerHTML = `<b>${sum} rrc</b>`;
 }
 
-/* -----------------------------
-   注文の保存
------------------------------ */
 document.getElementById("finishOrder").onclick = () => {
   if (!editingShift) return;
 
@@ -286,11 +298,26 @@ document.getElementById("menuRegister").onclick = () => {
   fetch("/api/menu", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, price, description: desc, type })
+    body: JSON.stringify({
+      name,
+      price,
+      description: desc,
+      type
+    })
   }).then(() => loadMenuList());
 };
 
 function loadMenuList() {
   Promise.all([
     fetch("/api/menu?type=host").then(r => r.json()),
-    fetch("/api/menu?type=maid").
+    fetch("/api/menu?type=maid").then(r => r.json())
+  ]).then(([hosts, maids]) => {
+    let html = "<h3>ホスト</h3>";
+    hosts.forEach(m => html += `${m.name} (${m.price})<br>`);
+
+    html += "<h3>メイド</h3>";
+    maids.forEach(m => html += `${m.name} (${m.price})<br>`);
+
+    document.getElementById("menuList").innerHTML = html;
+  });
+}
