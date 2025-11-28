@@ -110,4 +110,8 @@ app.post("/api/orders/finish", async(req,res)=>{
   res.json({ok:true});
 });
 
+// サイトのトップを index.html にする
+app.get("/", (req, res) => {
+  res.sendFile(path.resolve("public/index.html"));
+});
 app.listen(process.env.PORT || 3000, ()=>console.log("Server running"));
