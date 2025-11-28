@@ -7,7 +7,7 @@ let editingShift = null;
 let orderLog = [];
 
 /* ------------------------------------
-   ページロード時：初期タブを表示
+   ページロード時
 ------------------------------------ */
 window.onload = () => {
   switchTab("shift-host");
@@ -15,7 +15,7 @@ window.onload = () => {
 };
 
 /* ------------------------------------
-   タブクリック処理
+   タブクリック
 ------------------------------------ */
 document.querySelectorAll(".tab").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -33,31 +33,26 @@ document.querySelectorAll(".tab").forEach(btn => {
 });
 
 /* ------------------------------------
-   タブ切替（ここが最重要）
+   タブ切替
 ------------------------------------ */
 function switchTab(name) {
   currentTab = name;
 
-  // 全パネル非表示
   document.querySelectorAll(".panel").forEach(p => p.classList.add("hidden"));
-  // 対象パネル表示
   document.getElementById(name).classList.remove("hidden");
 
-  // 一般シフト
   if (name === "shift-host") loadShift("host", false);
   if (name === "shift-maid") loadShift("maid", false);
 
-  // 管理シフト（注文ボタンあり）
   if (name === "admin-shift-host") loadShift("host", true);
   if (name === "admin-shift-maid") loadShift("maid", true);
 
-  // 他管理タブ
   if (name === "users") loadUserList();
   if (name === "menu") loadMenuList();
 }
 
 /* ------------------------------------
-   管理パスワード
+   パスワード認証
 ------------------------------------ */
 function showAuth() {
   document.getElementById("authPanel").classList.remove("hidden");
@@ -87,7 +82,7 @@ function loadShift(type, adminMode) {
 }
 
 /* ------------------------------------
-   シフト表示（一般 / 管理）
+   シフト表示
 ------------------------------------ */
 function renderShift(type, data, adminMode) {
   const target =
@@ -100,8 +95,8 @@ function renderShift(type, data, adminMode) {
           : document.getElementById("shiftMaidTable"));
 
   const times = [
-    "20:00-20:30", "20:30-21:00", "21:00-21:30",
-    "21:30-22:00", "22:00-22:30", "22:30-23:00"
+    "20:00-20:30","20:30-21:00","21:00-21:30",
+    "21:30-22:00","22:00-22:30","22:30-23:00"
   ];
 
   let html = `<table class="shiftTable"><tr><th>${new Date().toLocaleDateString()}</th>`;
@@ -116,31 +111,24 @@ function renderShift(type, data, adminMode) {
 
     data.users.forEach(u => {
       const cell = data.shifts.find(s => s.user_id === u.id && s.time_slot === i);
-      let bg = "#d8f5d0"; // 緑
+      let bg = "#d8f5d0";
       let text = "";
 
       if (cell) {
         if (cell.status === "reserved") {
-          bg = "#fff6a8"; // 黄
+          bg = "#fff6a8";
           text = `${cell.reserved_name}`;
 
           if (adminMode) {
             text += `<br><button class="orderBtn" data-type="${type}" data-user="${u.id}" data-slot="${i}">注文</button>`;
           }
-
         } else if (cell.status === "busy") {
-          bg = "#f6b0b0"; // 赤
+          bg = "#f6b0b0";
           text = "X";
         }
       }
 
-      html += `<td 
-        style="background:${bg}" 
-        class="cell"
-        data-user="${u.id}" 
-        data-slot="${i}">
-        ${text}
-      </td>`;
+      html += `<td class="cell" style="background:${bg}" data-user="${u.id}" data-slot="${i}">${text}</td>`;
     });
 
     html += "</tr>";
@@ -149,15 +137,12 @@ function renderShift(type, data, adminMode) {
   html += "</table>";
   target.innerHTML = html;
 
-  /* --- 一般モード：ステータス編集 --- */
   if (!adminMode) {
-    document.querySelectorAll(`#${type === "host" ? "shiftHostTable" : "shiftMaidTable"} .cell`)
-      .forEach(cell => {
-        cell.onclick = () => editShift(type, cell);
-      });
+    document.querySelectorAll(".cell").forEach(cell => {
+      cell.onclick = () => editShift(type, cell);
+    });
   }
 
-  /* --- 管理モード：注文ボタン動作 --- */
   if (adminMode) {
     document.querySelectorAll(".orderBtn").forEach(btn => {
       btn.onclick = () => {
@@ -170,7 +155,7 @@ function renderShift(type, data, adminMode) {
 }
 
 /* ------------------------------------
-   一般モード：セル編集
+   シフト編集（一般）
 ------------------------------------ */
 function editShift(type, cell) {
   const user = cell.dataset.user;
@@ -208,18 +193,34 @@ function updateShift(user_id, type, slot, status, name) {
 }
 
 /* ------------------------------------
-   注文メニュー
+   注文（共通ログ）
 ------------------------------------ */
 function loadOrderMenu() {
+  const date = new Date().toISOString().slice(0, 10);
+
+  // ▼ DBから最新注文一覧を取得
+  fetch(`/api/order/list?date=${date}&type=${editingShift.type}&slot=${editingShift.slot}`)
+    .then(r => r.json())
+    .then(list => {
+      orderLog = list.map(o => ({
+        id: o.id,
+        name: o.name,
+        price: o.price
+      }));
+      renderOrderLog();
+    });
+
+  // ▼ メニュー読み込み
   fetch(`/api/menu?type=${editingShift.type}`)
     .then(r => r.json())
     .then(list => {
       let html = "";
       list.forEach(m => {
         html += `
-          <div>
-            ${m.name} (${m.price} rrc)
-            <button class="addOrder" data-name="${m.name}" data-price="${m.price}">追加</button>
+          <div>${m.name} (${m.price} rrc)
+            <button class="addOrder" data-name="${m.name}" data-price="${m.price}">
+              追加
+            </button>
           </div>`;
       });
 
@@ -228,26 +229,35 @@ function loadOrderMenu() {
       document.querySelectorAll(".addOrder").forEach(btn => {
         btn.onclick = () => addOrder(btn.dataset);
       });
-
-      renderOrderLog();
     });
 }
 
 function addOrder(d) {
-  orderLog.push({
-    name: d.name,
-    price: Number(d.price),
-    qty: 1
-  });
-  renderOrderLog();
+  const date = new Date().toISOString().slice(0, 10);
+
+  fetch("/api/order/add", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      date,
+      type: editingShift.type,
+      slot: editingShift.slot,
+      name: d.name,
+      price: Number(d.price)
+    })
+  })
+    .then(() => loadOrderMenu());
 }
 
+/* ------------------------------------
+   注文ログ表示
+------------------------------------ */
 function renderOrderLog() {
   let html = "";
   let sum = 0;
 
   orderLog.forEach(o => {
-    html += `${o.name} x1 = ${o.price}<br>`;
+    html += `${o.name} = ${o.price}<br>`;
     sum += o.price;
   });
 
@@ -256,28 +266,10 @@ function renderOrderLog() {
 }
 
 /* ------------------------------------
-   注文保存
+   finish（CSV保存なし）
 ------------------------------------ */
 document.getElementById("finishOrder").onclick = () => {
-  if (!editingShift) return;
-
-  const date = new Date().toISOString().slice(0, 10);
-  const sum = orderLog.reduce((a, b) => a + b.price, 0);
-
-  fetch("/api/orders/finish", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      date,
-      type: editingShift.type,
-      slot: editingShift.slot,
-      list: orderLog,
-      sum
-    })
-  });
-
-  alert("保存しました！");
-  orderLog = [];
+  alert("対応終了しました（DBには履歴が残り続けます）");
   switchTab(editingShift.type === "host" ? "admin-shift-host" : "admin-shift-maid");
 };
 
