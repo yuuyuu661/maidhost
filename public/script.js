@@ -52,24 +52,25 @@ function loadShift(type) {
     .then(data => renderShift(type, data));
 }
 
-function renderShift(type, data) {
-  const target =
-    type === "host"
+function renderShift(type, data, adminMode) {
+  const target = adminMode
+    ? (type === "host"
+      ? document.getElementById("adminShiftHostTable")
+      : document.getElementById("adminShiftMaidTable"))
+    : (type === "host"
       ? document.getElementById("shiftHostTable")
-      : document.getElementById("shiftMaidTable");
+      : document.getElementById("shiftMaidTable"));
 
   const times = [
-    "20:00-20:30", "20:30-21:00", "21:00-21:30",
-    "21:30-22:00", "22:00-22:30", "22:30-23:00"
+    "20:00-20:30","20:30-21:00","21:00-21:30",
+    "21:30-22:00","22:00-22:30","22:30-23:00"
   ];
 
   let html = `<table class="shiftTable"><tr><th>${new Date().toLocaleDateString()}</th>`;
-
   data.users.forEach(u => {
     const icon = u.icon_url || "/default.png";
-    html += `<th><img src="${icon}" class="icon"><br>${u.name}</th>`;
+    html += `<th><img src="${icon}" class="icon" onerror="this.src='/default.png'"><br>${u.name}</th>`;
   });
-
   html += "</tr>";
 
   times.forEach((slot, i) => {
@@ -78,6 +79,7 @@ function renderShift(type, data) {
     data.users.forEach(u => {
       const cell = data.shifts.find(s => s.user_id === u.id && s.time_slot === i);
 
+      // デフォルト（空）
       let bg = "#d8f5d0";
       let text = "";
 
@@ -86,27 +88,29 @@ function renderShift(type, data) {
           bg = "#fff6a8";
           text = `${cell.reserved_name}`;
 
-          // 金額があるならここに表示
-          if (cell.amount && cell.amount > 0) {
-            text += `<br><b>${cell.amount} rrc</b>`;
+          // 管理モード → 注文ボタン表示
+          if (adminMode) {
+            text += `<br><button class="orderBtn"
+                     data-type="${type}" data-user="${u.id}" data-slot="${i}">
+                     注文
+                     </button>`;
           }
 
-          // 予約済みなら注文ボタン表示
-          text += `<br><button class="orderBtn" data-type="${type}" data-slot="${i}" data-user="${u.id}">
-                      注文
-                   </button>`;
         } else if (cell.status === "busy") {
           bg = "#f6b0b0";
           text = "X";
         }
       }
 
-      html += `<td class="cell" style="background:${bg}"
-               data-user="${u.id}"
-               data-slot="${i}"
-               data-type="${type}">
-               ${text}
-               </td>`;
+      // 一般モードは data-user, data-slot を付与してクリック編集可能
+      if (!adminMode) {
+        html += `<td class="cell" data-user="${u.id}" data-slot="${i}" style="background:${bg}">
+                  ${text}
+                </td>`;
+      } else {
+        // 管理モードは編集禁止（クリック不可）
+        html += `<td style="background:${bg}">${text}</td>`;
+      }
     });
 
     html += "</tr>";
@@ -115,23 +119,23 @@ function renderShift(type, data) {
   html += "</table>";
   target.innerHTML = html;
 
-  // セル編集（状態変更）
-  document.querySelectorAll(".cell").forEach(cell => {
-    cell.onclick = () => editShift(cell);
-  });
+  // ▼ 一般モードのみ枠変更可能
+  if (!adminMode) {
+    document.querySelectorAll(".cell").forEach(cell => {
+      cell.onclick = () => editShift(type, cell);
+    });
+  }
 
-  // 注文ボタン
-  document.querySelectorAll(".orderBtn").forEach(btn => {
-    btn.onclick = () => {
-      currentOrderShift = {
-        type: btn.dataset.type,
-        slot: Number(btn.dataset.slot),
-        user: Number(btn.dataset.user)
+  // ▼ 管理モード → 注文ボタン
+  if (adminMode) {
+    document.querySelectorAll(".orderBtn").forEach(btn => {
+      btn.onclick = () => {
+        editingShift = btn.dataset;
+        switchTab("orders");
+        loadOrderMenu();
       };
-      lastLoadedShift = currentOrderShift;
-      switchTab("orders");
-    };
-  });
+    });
+  }
 }
 
 /* -----------------------------
