@@ -19,7 +19,7 @@ const pool = new pg.Pool({
 });
 
 /* -------------------------------------
-   DB 初期化（手動 SQL 不要）
+   DB 初期化（自動生成）
 ------------------------------------- */
 async function initDB() {
   await pool.query(`
@@ -63,15 +63,15 @@ async function initDB() {
     );
   `);
 
-  // 透明PNG作成（default.png）
   if (!fs.existsSync("public/default.png")) {
     fs.writeFileSync("public/default.png", Buffer.from([137,80,78,71]));
   }
 }
+
 initDB();
 
 /* -------------------------------------
-   ユーザー CRUD
+   ユーザー登録
 ------------------------------------- */
 const upload = multer({ dest: "uploads/" });
 
@@ -151,7 +151,7 @@ app.post("/api/shifts/update", async (req, res) => {
 });
 
 /* -------------------------------------
-   メニュー管理（追加 / 削除 / 読込）
+   メニュー
 ------------------------------------- */
 app.post("/api/menu", async (req, res) => {
   const { name, price, description, type } = req.body;
@@ -179,8 +179,10 @@ app.delete("/api/menu/:id", async (req, res) => {
 });
 
 /* -------------------------------------
-   注文（共有履歴）
+   ▼ 注文（端末共通で保持）
 ------------------------------------- */
+
+// 注文追加
 app.post("/api/order/add", async (req, res) => {
   const { date, type, slot, name, price } = req.body;
 
@@ -193,9 +195,18 @@ app.post("/api/order/add", async (req, res) => {
   res.json({ ok: true });
 });
 
-app.delete("/api/order/:id", async (req, res) => {
-  await pool.query(`DELETE FROM orders WHERE id=$1`, [req.params.id]);
-  res.json({ ok: true });
+// 注文リスト取得（端末共通）
+app.get("/api/order/list", async (req, res) => {
+  const { date, type, slot } = req.query;
+
+  const q = await pool.query(
+    `SELECT * FROM orders
+     WHERE date=$1 AND type=$2 AND slot=$3
+     ORDER BY id`,
+    [date, type, slot]
+  );
+
+  res.json(q.rows);
 });
 
 /* -------------------------------------
