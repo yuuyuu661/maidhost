@@ -1,61 +1,71 @@
-body{font-family:sans-serif;margin:0;}
-#tabs{display:flex;background:#eee;padding:4px;gap:4px;}
-.tab{padding:8px;background:#ddd;border:none;cursor:pointer;}
-.tab.active{background:#fff;}
-.panel{display:none;padding:10px;}
-.panel.active{display:block;}
-table{border-collapse:collapse;}
-td,th{border:1px solid #ccc;padding:6px;text-align:center;}
-td.empty{background:#d9f5d9;}
-td.reserved{background:#fff5a3;}
-td.x{background:#f5b1b1;}
-/* ==== ダイアログ（初期は非表示） ==== */
+body { font-family: sans-serif; margin: 0; }
+
+/* タブ */
+#tabs { display: flex; background: #eee; padding: 4px; }
+.tab { padding: 8px; border: none; background: #ddd; cursor: pointer; }
+.tab.active { background: #fff; }
+
+.panel { display: none; padding: 12px; }
+.panel.active { display: block; }
+
+/* シフト表 */
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+
+td.empty { background: #d9f5d9; }
+td.reserved { background: #fff5a3; }
+td.x { background: #f5b1b1; }
+
+/* ダイアログ */
 #edit-dialog {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  display: none; /* ←★これが重要！ */
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  display: none;
   justify-content: center;
   align-items: center;
   z-index: 9999;
 }
 
-/* 背景の黒い半透明 */
 .dialog-bg {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100%; height: 100%;
   background: rgba(0,0,0,0.4);
 }
 
-/* 中央の白いボックス */
 .dialog-box {
   position: relative;
+  width: 300px;
   background: #fff;
   padding: 20px;
-  width: 300px;
   border-radius: 8px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.2);
   z-index: 10000;
 }
 
-.dialog-box h3 {
-  margin-top: 0;
+.hidden { display: none; }
+
+.admin-lock {
+  background: #f0f0f0;
+  padding: 12px;
+  border: 1px solid #ccc;
+  width: 260px;
 }
 
-.dialog-box input,
-.dialog-box select {
-  width: 100%;
+/* 注文 */
+.order-box {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
   padding: 6px;
-  margin-top: 4px;
-  box-sizing: border-box;
+  background: #fafafa;
 }
 
-.dialog-box button {
-  padding: 6px 12px;
-  margin-right: 6px;
+/* 注文ボタン */
+.order-btn {
+  background: #ff914d;
+  padding: 4px 8px;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
 }
