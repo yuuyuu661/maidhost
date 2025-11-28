@@ -338,11 +338,33 @@ function loadMenuList() {
     fetch("/api/menu?type=maid").then(r => r.json())
   ]).then(([hosts, maids]) => {
     let html = "<h3>ホスト</h3>";
-    hosts.forEach(m => html += `${m.name} (${m.price})<br>`);
+    hosts.forEach(m => {
+      html += `
+        ${m.name} (${m.price} rrc)
+        <button class="delMenu" data-id="${m.id}">削除</button><br>
+      `;
+    });
 
     html += "<h3>メイド</h3>";
-    maids.forEach(m => html += `${m.name} (${m.price})<br>`);
+    maids.forEach(m => {
+      html += `
+        ${m.name} (${m.price} rrc)
+        <button class="delMenu" data-id="${m.id}">削除</button><br>
+      `;
+    });
 
     document.getElementById("menuList").innerHTML = html;
+
+    // ▼ 削除イベント
+    document.querySelectorAll(".delMenu").forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.id;
+        if (!confirm("削除しますか？")) return;
+
+        fetch(`/api/menu/${id}`, { method: "DELETE" })
+          .then(() => loadMenuList());
+      };
+    });
   });
 }
+
