@@ -1,162 +1,187 @@
-/* ------------------------------------
-   全体レイアウト
------------------------------------- */
+/* -------------------------------------
+   全体
+------------------------------------- */
 body {
-  font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
-  padding: 10px;
-  background: #fafafa;
   margin: 0;
+  padding: 0;
+  font-family: "Hiragino Sans","Yu Gothic",sans-serif;
+  background: #fafafa;
 }
 
-h2, h3 {
-  margin: 10px 0;
-}
-
-/* ------------------------------------
-   タブ
------------------------------------- */
+/* -------------------------------------
+   タブメニュー
+------------------------------------- */
 #tabs {
   display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  padding-bottom: 6px;
+  flex-wrap: wrap;
+  background: #222;
+  padding: 8px;
 }
 
-.tab {
-  flex-shrink: 0;
-  padding: 8px 14px;
-  font-size: 15px;
-  background: #eee;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+#tabs .tab {
+  color: white;
+  background: #444;
+  border: none;
+  padding: 10px 18px;
+  margin-right: 6px;
+  margin-bottom: 6px;
   cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
-.tab:hover {
-  background: #ddd;
+#tabs .tab:hover {
+  background: #666;
 }
 
+/* -------------------------------------
+   パネル表示切替
+------------------------------------- */
 .panel {
-  padding: 10px;
+  padding: 20px;
 }
-
 .hidden {
   display: none;
 }
 
-/* ------------------------------------
-   シフト表
------------------------------------- */
+/* -------------------------------------
+   シフトテーブル
+------------------------------------- */
 .shiftTable {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 10px;
+  margin-top: 15px;
 }
 
 .shiftTable th,
 .shiftTable td {
   border: 1px solid #ccc;
-  padding: 6px;
+  padding: 12px;
   text-align: center;
-  font-size: 13px;
+  vertical-align: middle;
+  font-size: 14px;
 }
 
-.icon {
-  width: 60px;
-  height: auto;
-  border-radius: 6px;
-}
-
-/* ------------------------------------
-   注文ボタン
------------------------------------- */
-.orderBtn {
-  margin-top: 4px;
-  padding: 4px 10px;
-  font-size: 13px;
-  border: none;
-  border-radius: 4px;
-  background: #4caf50;
-  color: white;
-  cursor: pointer;
-}
-
-.orderBtn:hover {
-  background: #449b49;
-}
-
-/* ------------------------------------
-   メニューアイテム
------------------------------------- */
-.menuItem {
-  padding: 6px;
-  border-bottom: 1px solid #ddd;
-}
-
-.addOrder {
-  padding: 4px 8px;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.addOrder:hover {
-  background: #006ee0;
-}
-
-/* ------------------------------------
-   注文履歴
------------------------------------- */
-.historyRow {
-  border-bottom: 1px solid #ccc;
-  padding: 6px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.delOrder {
-  padding: 4px 8px;
-  background: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.delOrder:hover {
-  background: #d63829;
-}
-
-/* ------------------------------------
-   スマホ最適化
------------------------------------- */
+/* スマホ時 */
 @media (max-width: 600px) {
-  .icon {
-    width: 40px;
-  }
-
-  .tab {
-    padding: 6px 10px;
-    font-size: 13px;
-  }
-
   .shiftTable th,
   .shiftTable td {
-    padding: 4px;
+    padding: 6px;
     font-size: 11px;
   }
 
-  .orderBtn {
-    padding: 3px 6px;
-    font-size: 11px;
+  .icon {
+    width: 32px;
+    height: 32px;
   }
+}
 
-  .addOrder,
-  .delOrder {
-    padding: 3px 6px;
-    font-size: 11px;
+/* -------------------------------------
+   アイコン画像
+------------------------------------- */
+.icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* -------------------------------------
+   色（状態）
+------------------------------------- */
+.freeCell {
+  background: #d8f5d0 !important;  /* 緑（空き） */
+}
+
+.reservedCell {
+  background: #fff6a8 !important;  /* 黄色（予約） */
+}
+
+.busyCell {
+  background: #f6b0b0 !important;  /* 赤（不在） */
+}
+
+/* -------------------------------------
+   注文ボタン
+------------------------------------- */
+.orderBtn {
+  margin-top: 5px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid #444;
+  background: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.orderBtn:hover {
+  background: #eee;
+}
+
+/* -------------------------------------
+   削除ボタン
+------------------------------------- */
+.delBtn {
+  margin-left: 8px;
+  background: #ff4444;
+  color: white;
+  border: none;
+  padding: 3px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.delBtn:hover {
+  background: #ff2222;
+}
+
+/* -------------------------------------
+   入力フォーム
+------------------------------------- */
+input,
+select,
+button {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+button {
+  cursor: pointer;
+}
+
+#menuName,
+#menuPrice,
+#menuDesc,
+#userName {
+  width: 200px;
+  padding: 6px;
+}
+
+/* スマホ最適化 */
+@media (max-width: 600px) {
+  #menuName,
+  #menuPrice,
+  #menuDesc,
+  #userName {
+    width: 100%;
   }
+}
+
+/* -------------------------------------
+   注文履歴
+------------------------------------- */
+#orderLog {
+  margin-top: 10px;
+  padding: 8px;
+  background: white;
+  border: 1px solid #ccc;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+#orderMenu {
+  margin-top: 12px;
+}
+
+#orderMenu div {
+  margin-bottom: 6px;
 }
