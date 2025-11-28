@@ -8,7 +8,7 @@ let currentShiftDate = null;
 let currentShiftSlot = null;
 let currentShiftUserName = null;
 
-const ADMIN_PASSWORD = "";  // ← server.js から埋め込まれる（安全）
+const ADMIN_PASSWORD = "あなたの管理者パスワード";
 
 
 /* =========================================================
