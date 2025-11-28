@@ -16,67 +16,40 @@
   <button class="tab" data-panel="order">注文</button>
 </div>
 
-<!-- ================================================================= -->
-<!-- ユーザー管理 -->
-<!-- ================================================================= -->
-<div id="panel-users" class="panel">
-  <h2>ユーザー管理</h2>
-
-  <div id="admin-lock-users" class="admin-lock">
-    <p>管理パスワードを入力してください</p>
-    <input id="admin-pass-users" type="password" placeholder="password">
-    <button id="unlock-users">認証</button>
-  </div>
-
-  <div id="users-content" class="hidden">
-    <h3>新規登録</h3>
-    <input id="u-name" placeholder="名前">
-    <select id="u-type">
-      <option value="host">ホスト</option>
-      <option value="maid">メイド</option>
-    </select>
-    <input type="file" id="u-icon">
-    <button id="u-save">登録</button>
-
-    <h3>登録済みユーザー</h3>
-    <div id="u-list"></div>
-  </div>
-</div>
-
-<!-- ================================================================= -->
 <!-- シフト（ホスト） -->
-<!-- ================================================================= -->
 <div id="panel-shift-host" class="panel">
   <h2>シフト(ホスト)</h2>
-  <div id="sh-host"></div>
+  <div class="shift-wrapper">
+    <div id="sh-host"></div>
+  </div>
 </div>
 
+<!-- シフト（メイド） -->
 <div id="panel-shift-maid" class="panel">
   <h2>シフト(メイド)</h2>
-  <div id="sh-maid"></div>
+  <div class="shift-wrapper">
+    <div id="sh-maid"></div>
+  </div>
 </div>
 
-<!-- ================================================================= -->
-<!-- メニュー管理 -->
-<!-- ================================================================= -->
+<!-- メニュー登録 -->
 <div id="panel-menu" class="panel">
   <h2>メニュー管理</h2>
 
   <div id="admin-lock-menu" class="admin-lock">
     <p>管理パスワードを入力してください</p>
-    <input id="admin-pass-menu" type="password" placeholder="password">
+    <input id="admin-pass-menu" type="password">
     <button id="unlock-menu">認証</button>
   </div>
 
   <div id="menu-content" class="hidden">
     <h3>メニュー登録</h3>
 
-    <label>対象</label><br>
+    <label>区分</label><br>
     <select id="menu-type-select">
       <option value="host">ホスト</option>
       <option value="maid">メイド</option>
-    </select>
-    <br><br>
+    </select><br><br>
 
     <label>ユーザー</label><br>
     <select id="menu-user-select"></select><br><br>
@@ -91,9 +64,32 @@
   </div>
 </div>
 
-<!-- ================================================================= -->
+<!-- ユーザー管理 -->
+<div id="panel-users" class="panel">
+  <h2>ユーザー管理</h2>
+
+  <div id="admin-lock-users" class="admin-lock">
+    <p>管理パスワードを入力してください</p>
+    <input id="admin-pass-users" type="password">
+    <button id="unlock-users">認証</button>
+  </div>
+
+  <div id="users-content" class="hidden">
+    <h3>新規ユーザー登録</h3>
+    <input id="u-name" placeholder="名前">
+    <select id="u-type">
+      <option value="host">ホスト</option>
+      <option value="maid">メイド</option>
+    </select>
+    <input type="file" id="u-icon">
+    <button id="u-save">登録</button>
+
+    <h3>登録済みユーザー</h3>
+    <div id="u-list"></div>
+  </div>
+</div>
+
 <!-- 注文画面 -->
-<!-- ================================================================= -->
 <div id="panel-order" class="panel">
   <h2>注文</h2>
   <button id="order-finish">対応終了</button>
