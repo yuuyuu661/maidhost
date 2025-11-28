@@ -10,52 +10,51 @@
 
 <!-- ▼ ナビゲーション -->
 <div id="tabs">
-  <!-- 一般ユーザー向け -->
   <button class="tab" data-tab="shift-host">シフト（ホスト）</button>
   <button class="tab" data-tab="shift-maid">シフト（メイド）</button>
 
-  <!-- 管理者向け -->
-  <button class="tab" data-tab="admin-shift-host">管理：ホストシフト</button>
-  <button class="tab" data-tab="admin-shift-maid">管理：メイドシフト</button>
+  <button class="tab" data-tab="admin-host">管理：ホストシフト</button>
+  <button class="tab" data-tab="admin-maid">管理：メイドシフト</button>
 
-  <!-- 管理者共通 -->
   <button class="tab" data-tab="menu">メニュー管理</button>
   <button class="tab" data-tab="users">ユーザー管理</button>
   <button class="tab" data-tab="orders">注文</button>
 </div>
 
-<!-- ▼ シフト一般ホスト -->
+<!-- ▼ 一般：ホスト -->
 <div id="shift-host" class="panel">
   <h2>シフト（ホスト）</h2>
   <div id="shiftHostTable"></div>
 </div>
 
-<!-- ▼ シフト一般メイド -->
+<!-- ▼ 一般：メイド -->
 <div id="shift-maid" class="panel hidden">
   <h2>シフト（メイド）</h2>
   <div id="shiftMaidTable"></div>
 </div>
 
-<!-- ▼ 管理ホスト -->
-<div id="admin-shift-host" class="panel hidden">
+<!-- ▼ 管理：ホスト -->
+<div id="admin-host" class="panel hidden">
   <h2>管理：ホストシフト</h2>
-  <div id="adminShiftHostTable"></div>
+  <div id="adminHostTable"></div>
 </div>
 
-<!-- ▼ 管理メイド -->
-<div id="admin-shift-maid" class="panel hidden">
+<!-- ▼ 管理：メイド -->
+<div id="admin-maid" class="panel hidden">
   <h2>管理：メイドシフト</h2>
-  <div id="adminShiftMaidTable"></div>
+  <div id="adminMaidTable"></div>
 </div>
 
 <!-- ▼ メニュー管理 -->
 <div id="menu" class="panel hidden">
   <h2>メニュー管理</h2>
+
+  <h3>登録</h3>
   <select id="menuType">
     <option value="host">ホスト用</option>
     <option value="maid">メイド用</option>
-  </select>
-  <br>
+  </select><br>
+
   <input id="menuName" placeholder="商品名"><br>
   <input id="menuPrice" type="number" placeholder="値段"><br>
   <input id="menuDesc" placeholder="概要"><br>
@@ -69,6 +68,7 @@
 <div id="users" class="panel hidden">
   <h2>ユーザー管理</h2>
 
+  <h3>登録</h3>
   <select id="userType">
     <option value="host">ホスト</option>
     <option value="maid">メイド</option>
@@ -81,15 +81,14 @@
   <div id="userList"></div>
 </div>
 
-<!-- ▼ 注文 -->
+<!-- ▼ 注文画面 -->
 <div id="orders" class="panel hidden">
-  <h2>注文</h2>
-  <button id="finishOrder">対応終了</button>
+  <h2>注文処理</h2>
 
-  <h3>注文履歴</h3>
+  <h3>現在の注文</h3>
   <div id="orderLog"></div>
 
-  <h3>合計</h3>
+  <h3>合計金額</h3>
   <div id="orderSum"></div>
 
   <h3>メニュー</h3>
