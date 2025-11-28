@@ -1,0 +1,11 @@
+body{font-family:sans-serif;margin:0;}
+#tabs{display:flex;background:#eee;padding:4px;gap:4px;}
+.tab{padding:8px;background:#ddd;border:none;cursor:pointer;}
+.tab.active{background:#fff;}
+.panel{display:none;padding:10px;}
+.panel.active{display:block;}
+table{border-collapse:collapse;}
+td,th{border:1px solid #ccc;padding:6px;text-align:center;}
+td.empty{background:#d9f5d9;}
+td.reserved{background:#fff5a3;}
+td.x{background:#f5b1b1;}
