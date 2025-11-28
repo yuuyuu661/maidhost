@@ -7,35 +7,59 @@ import path from "path";
 
 const app = express();
 
-/* ----------------------------------------------
-  ミドルウェア
----------------------------------------------- */
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
-/* ----------------------------------------------
-  DB 接続
----------------------------------------------- */
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-/* ----------------------------------------------
-  管理パスワード（固定：yamada）
----------------------------------------------- */
-app.post("/api/admin-check", (req, res) => {
-  const ok = req.body.pass === "yamada";
-  res.json({ ok });
-});
+/* ------------------------------------------
+   DB初期化：テーブル自動作成
+------------------------------------------ */
+async function initDB() {
+  console.log("Initializing database...");
 
-/* ----------------------------------------------
-  ユーザー登録（ホスト or メイド）
----------------------------------------------- */
-const upload = multer({ dest: "uploads/" });
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      icon_url TEXT
+    );
+  `);
 
-app.post("/api/users", upload.single("icon"), async (req, res) => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS shifts (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      date DATE NOT NULL,
+      time_slot INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      reserved_name TEXT DEFAULT '',
+      UNIQUE (user_id, date, time_slot)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS menus (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      price INTEGER NOT NULL,
+      description TEXT,
+      type TEXT NOT NULL
+    );
+  `);
+
+  console.log("Database initialized.");
+}
+
+/* ------------------------------------------
+   ユーザー
+------------------------------------------ */
+app.post("/api/users", multer({ dest: "uploads/" }).single("icon"), async (req, res) => {
   const { name, type } = req.body;
   const icon = req.file ? "/uploads/" + req.file.filename : null;
 
@@ -47,30 +71,22 @@ app.post("/api/users", upload.single("icon"), async (req, res) => {
   res.json({ ok: true });
 });
 
-/* ----------------------------------------------
-  ユーザー一覧取得
----------------------------------------------- */
 app.get("/api/users", async (req, res) => {
-  const type = req.query.type;
   const q = await pool.query(
     `SELECT * FROM users WHERE type=$1 ORDER BY id`,
-    [type]
+    [req.query.type]
   );
   res.json(q.rows);
 });
 
-/* ----------------------------------------------
-  ユーザー削除
----------------------------------------------- */
 app.delete("/api/users/:id", async (req, res) => {
-  const id = req.params.id;
-  await pool.query(`DELETE FROM users WHERE id=$1`, [id]);
+  await pool.query(`DELETE FROM users WHERE id=$1`, [req.params.id]);
   res.json({ ok: true });
 });
 
-/* ----------------------------------------------
-  シフト取得（通常 & 管理者用 両方共通）
----------------------------------------------- */
+/* ------------------------------------------
+   シフト
+------------------------------------------ */
 app.get("/api/shifts", async (req, res) => {
   const { type, date } = req.query;
 
@@ -84,15 +100,9 @@ app.get("/api/shifts", async (req, res) => {
     [date]
   );
 
-  res.json({
-    users: users.rows,
-    shifts: shifts.rows
-  });
+  res.json({ users: users.rows, shifts: shifts.rows });
 });
 
-/* ----------------------------------------------
-  シフト更新（一般モード：セルクリック編集）
----------------------------------------------- */
 app.post("/api/shifts/update", async (req, res) => {
   const { user_id, date, time_slot, status, reserved_name } = req.body;
 
@@ -109,71 +119,67 @@ app.post("/api/shifts/update", async (req, res) => {
   res.json({ ok: true });
 });
 
-/* ----------------------------------------------
-  メニュー登録（ホスト / メイド）
----------------------------------------------- */
+/* ------------------------------------------
+   メニュー
+------------------------------------------ */
 app.post("/api/menu", async (req, res) => {
   const { name, price, description, type } = req.body;
 
   await pool.query(
     `INSERT INTO menus (name, price, description, type)
-     VALUES ($1, $2, $3, $4)`,
+     VALUES ($1,$2,$3,$4)`,
     [name, price, description, type]
   );
 
   res.json({ ok: true });
 });
 
-/* ----------------------------------------------
-  メニュー一覧取得
----------------------------------------------- */
 app.get("/api/menu", async (req, res) => {
-  const type = req.query.type;
-
   const q = await pool.query(
     `SELECT * FROM menus WHERE type=$1 ORDER BY id`,
-    [type]
+    [req.query.type]
   );
-
   res.json(q.rows);
 });
 
-/* ----------------------------------------------
-  注文完了 → JSON + CSV 保存
----------------------------------------------- */
+/* ------------------------------------------
+   注文（JSON & CSV保存）
+------------------------------------------ */
 app.post("/api/orders/finish", async (req, res) => {
   const { date, type, slot, list, sum } = req.body;
 
   if (!fs.existsSync("orders")) fs.mkdirSync("orders");
 
-  const jsonPath = `orders/${date}_${type}_${slot}.json`;
-  const csvPath  = `orders/${date}_${type}_${slot}.csv`;
+  fs.writeFileSync(
+    `orders/${date}_${type}_${slot}.json`,
+    JSON.stringify(list, null, 2)
+  );
 
-  /* JSON 保存 */
-  fs.writeFileSync(jsonPath, JSON.stringify(list, null, 2));
-
-  /* CSV 保存 */
   let csv = "name,price,qty\n";
-  list.forEach(item => {
-    csv += `${item.name},${item.price},1\n`;
-  });
+  list.forEach(o => (csv += `${o.name},${o.price},1\n`));
   csv += `合計,${sum}`;
 
-  fs.writeFileSync(csvPath, csv);
+  fs.writeFileSync(`orders/${date}_${type}_${slot}.csv`, csv);
 
   res.json({ ok: true });
 });
 
-/* ----------------------------------------------
-  index.html（SPA用）
----------------------------------------------- */
+/* ------------------------------------------
+   index.html
+------------------------------------------ */
 app.get("/", (req, res) => {
   res.sendFile(path.resolve("public/index.html"));
 });
 
-/* ----------------------------------------------
-  サーバー起動
----------------------------------------------- */
-app.listen(process.env.PORT || 3000, () =>
-  console.log("Server Started")
-);
+/* ------------------------------------------
+   サーバー起動
+------------------------------------------ */
+async function startServer() {
+  await initDB(); // ← テーブル自動作成
+
+  app.listen(process.env.PORT || 3000, () =>
+    console.log("Server Started")
+  );
+}
+
+startServer();
