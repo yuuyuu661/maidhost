@@ -98,11 +98,15 @@ function renderShift(type, data, adminMode) {
     "21:30-22:00","22:00-22:30","22:30-23:00"
   ];
 
-  let html = `<table class="shiftTable"><tr><th>${new Date().toLocaleDateString()}</th>`;
-  data.users.forEach(u => {
-    html += `<th><img src="${u.icon_url}" class="icon"><br>${u.name}</th>`;
-  });
-  html += "</tr>";
+let html = `<table class="shiftTable"><tr><th>${new Date().toLocaleDateString()}</th>`;
+data.users.forEach(u => {
+  const icon = u.icon_url || "/default.png"; // ← null対策
+  html += `<th>
+    <img src="${icon}" class="icon" onerror="this.src='/default.png'">
+    <br>${u.name}
+  </th>`;
+});
+html += "</tr>";
 
   times.forEach((slot, i) => {
     html += `<tr><td>${slot}</td>`;
