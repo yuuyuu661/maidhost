@@ -1,104 +1,98 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ホスト・メイド管理</title>
-<link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ホスト・メイド管理サイト</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- ▼ ナビゲーション -->
 <div id="tabs">
-  <button class="tab" data-panel="shift-host">シフト(ホスト)</button>
-  <button class="tab" data-panel="shift-maid">シフト(メイド)</button>
-  <button class="tab" data-panel="menu">メニュー</button>
-  <button class="tab" data-panel="users">ユーザー</button>
-  <button class="tab" data-panel="order">注文</button>
+  <button class="tab" data-tab="shift-host">シフト(ホスト)</button>
+  <button class="tab" data-tab="shift-maid">シフト(メイド)</button>
+  <button class="tab" data-tab="menu">メニュー</button>
+  <button class="tab" data-tab="users">ユーザー</button>
+  <button class="tab" data-tab="orders">注文</button>
 </div>
 
-<!-- シフト（ホスト） -->
-<div id="panel-shift-host" class="panel">
-  <h2>シフト(ホスト)</h2>
-  <div class="shift-wrapper">
-    <div id="sh-host"></div>
+<!-- ▼ 管理者認証パネル（全タブ共通で1回だけ） -->
+<div id="authPanel" class="popup-bg hidden">
+  <div class="popup">
+    <h3>管理パスワードを入力</h3>
+    <input id="adminPassInput" type="password" placeholder="パスワード">
+    <button id="adminPassCheck">認証</button>
   </div>
 </div>
 
-<!-- シフト（メイド） -->
-<div id="panel-shift-maid" class="panel">
-  <h2>シフト(メイド)</h2>
-  <div class="shift-wrapper">
-    <div id="sh-maid"></div>
-  </div>
+<!-- ▼ シフト（ホスト） -->
+<div id="shift-host" class="panel hidden">
+  <h2>シフト（ホスト）</h2>
+  <div id="shiftHostTable"></div>
 </div>
 
-<!-- メニュー登録 -->
-<div id="panel-menu" class="panel">
+<!-- ▼ シフト（メイド） -->
+<div id="shift-maid" class="panel hidden">
+  <h2>シフト（メイド）</h2>
+  <div id="shiftMaidTable"></div>
+</div>
+
+<!-- ▼ メニュー管理 -->
+<div id="menu" class="panel hidden">
   <h2>メニュー管理</h2>
 
-  <div id="admin-lock-menu" class="admin-lock">
-    <p>管理パスワードを入力してください</p>
-    <input id="admin-pass-menu" type="password">
-    <button id="unlock-menu">認証</button>
-  </div>
-
-  <div id="menu-content" class="hidden">
+  <div class="adminOnly">
     <h3>メニュー登録</h3>
+    <label>対象</label>
+    <select id="menuType">
+      <option value="host">ホスト用</option>
+      <option value="maid">メイド用</option>
+    </select><br>
 
-    <label>区分</label><br>
-    <select id="menu-type-select">
-      <option value="host">ホスト</option>
-      <option value="maid">メイド</option>
-    </select><br><br>
-
-    <label>ユーザー</label><br>
-    <select id="menu-user-select"></select><br><br>
-
-    <input id="m-name" placeholder="商品名">
-    <input id="m-price" placeholder="値段">
-    <input id="m-desc" placeholder="概要">
-    <button id="m-save">登録</button>
-
-    <h3>登録済メニュー</h3>
-    <div id="m-list"></div>
+    <input id="menuName" placeholder="商品名"><br>
+    <input id="menuPrice" type="number" placeholder="値段"><br>
+    <input id="menuDesc" placeholder="概要"><br>
+    <button id="menuRegister">登録</button>
   </div>
+
+  <h3>登録済みメニュー</h3>
+  <div id="menuList"></div>
 </div>
 
-<!-- ユーザー管理 -->
-<div id="panel-users" class="panel">
+<!-- ▼ ユーザー管理 -->
+<div id="users" class="panel hidden">
   <h2>ユーザー管理</h2>
 
-  <div id="admin-lock-users" class="admin-lock">
-    <p>管理パスワードを入力してください</p>
-    <input id="admin-pass-users" type="password">
-    <button id="unlock-users">認証</button>
-  </div>
-
-  <div id="users-content" class="hidden">
-    <h3>新規ユーザー登録</h3>
-    <input id="u-name" placeholder="名前">
-    <select id="u-type">
+  <div class="adminOnly">
+    <h3>ユーザー登録</h3>
+    <select id="userType">
       <option value="host">ホスト</option>
       <option value="maid">メイド</option>
-    </select>
-    <input type="file" id="u-icon">
-    <button id="u-save">登録</button>
-
-    <h3>登録済みユーザー</h3>
-    <div id="u-list"></div>
+    </select><br>
+    <input id="userName" placeholder="名前"><br>
+    <input id="userIcon" type="file"><br>
+    <button id="userRegister">登録</button>
   </div>
+
+  <h3>登録済みユーザー</h3>
+  <div id="userList"></div>
 </div>
 
-<!-- 注文画面 -->
-<div id="panel-order" class="panel">
+<!-- ▼ 注文（予約枠から来る） -->
+<div id="orders" class="panel hidden">
   <h2>注文</h2>
-  <button id="order-finish">対応終了</button>
 
-  <h3>注文履歴</h3>
-  <div id="order-log" class="order-box"></div>
+  <div id="orderContainer">
+    <button id="finishOrder">対応終了</button>
 
-  <h3>メニュー</h3>
-  <div id="order-menu-list" class="order-box"></div>
+    <h3>注文履歴</h3>
+    <div id="orderLog"></div>
+    <div id="orderSum"></div>
+
+    <h3>メニュー</h3>
+    <div id="orderMenu"></div>
+  </div>
 </div>
 
 <script src="script.js"></script>
