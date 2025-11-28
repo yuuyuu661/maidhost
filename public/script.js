@@ -8,7 +8,7 @@ let currentShiftDate = null;
 let currentShiftSlot = null;
 let currentShiftUserName = null;
 
-const ADMIN_PASSWORD = "あなたの管理者パスワード";
+const ADMIN_PASSWORD = "yamada";
 
 
 /* =========================================================
