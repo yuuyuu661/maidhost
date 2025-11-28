@@ -28,9 +28,9 @@ function checkAdmin(req, res, next) {
   next();
 }
 
-/* ----------------------------------------
+/* =========================================================
    Users
----------------------------------------- */
+========================================================= */
 app.post("/api/users", upload.single("icon"), async (req,res)=>{
   const { name, type } = req.body;
   let icon = null;
@@ -44,15 +44,37 @@ app.post("/api/users", upload.single("icon"), async (req,res)=>{
   res.json({ ok:true });
 });
 
+app.post("/api/users/delete", checkAdmin, async(req,res)=>{
+  const { id } = req.body;
+
+  // アイコンパス取得
+  const q = await pool.query(`SELECT icon_url FROM users WHERE id=$1`, [id]);
+  if (q.rows.length === 0) return res.json({ ok:false });
+
+  const icon = q.rows[0].icon_url;
+  if (icon) {
+    const file = path.join("uploads", icon.replace("/uploads/", ""));
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+  }
+
+  // 関連データ削除
+  await pool.query(`DELETE FROM shifts WHERE user_id=$1`, [id]);
+  await pool.query(`DELETE FROM menus WHERE user_id=$1`, [id]);
+  await pool.query(`DELETE FROM users WHERE id=$1`, [id]);
+
+  res.json({ ok:true });
+});
+
 app.get("/api/users", async (req,res)=>{
   const { type } = req.query;
   const q = await pool.query(`SELECT * FROM users WHERE type=$1 ORDER BY id`,[type]);
   res.json(q.rows);
 });
 
-/* ----------------------------------------
+
+/* =========================================================
    Shifts
----------------------------------------- */
+========================================================= */
 app.get("/api/shifts", async (req,res)=>{
   const { type, date } = req.query;
   const users = await pool.query(`SELECT * FROM users WHERE type=$1 ORDER BY id`,[type]);
@@ -74,31 +96,34 @@ app.post("/api/shifts/update", checkAdmin, async(req,res)=>{
   res.json({ ok:true });
 });
 
-/* ----------------------------------------
-   Menu
----------------------------------------- */
+
+/* =========================================================
+   Menu（ユーザー選択なし・typeで分類）
+========================================================= */
 app.post("/api/menu", checkAdmin, async(req,res)=>{
-  const { user_id, name, price, description } = req.body;
+  const { type, name, price, description } = req.body;
 
   await pool.query(
-    `INSERT INTO menus (user_id,name,price,description) VALUES ($1,$2,$3,$4)`,
-    [user_id,name,price,description]
+    `INSERT INTO menus (type,name,price,description) VALUES($1,$2,$3,$4)`,
+    [type, name, price, description]
   );
 
   res.json({ ok:true });
 });
 
+// type = host / maid
 app.get("/api/menu", async(req,res)=>{
-  const { user_id } = req.query;
-  const q = await pool.query(`SELECT * FROM menus WHERE user_id=$1 ORDER BY id`,[user_id]);
+  const { type } = req.query;
+  const q = await pool.query(`SELECT * FROM menus WHERE type=$1 ORDER BY id`,[type]);
   res.json(q.rows);
 });
 
-/* ----------------------------------------
+
+/* =========================================================
    Orders
----------------------------------------- */
+========================================================= */
 app.post("/api/orders/finish", async (req,res)=>{
-  const { shift_id, userName, customerName, slot, date, orders, sum } = req.body;
+  const { userName, slot, date, orders, sum } = req.body;
 
   const jsonPath = `orders/${date}_${userName}_${slot}.json`;
   const csvPath  = `orders/${date}_${userName}_${slot}.csv`;
@@ -115,9 +140,10 @@ app.post("/api/orders/finish", async (req,res)=>{
   res.json({ ok:true });
 });
 
-/* ----------------------------------------
+
+/* =========================================================
    index.html
----------------------------------------- */
+========================================================= */
 app.get("/", (req,res)=>{
   res.sendFile(path.resolve("public/index.html"));
 });
