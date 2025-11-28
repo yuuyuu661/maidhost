@@ -1,7 +1,13 @@
-<!doctype html><html lang="ja"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>管理サイト</title><link rel="stylesheet" href="style.css"></head>
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ホスト・メイド管理</title>
+<link rel="stylesheet" href="style.css" />
+</head>
 <body>
+
 <div id="tabs">
   <button class="tab" data-panel="shift-host">シフト(ホスト)</button>
   <button class="tab" data-panel="shift-maid">シフト(メイド)</button>
@@ -10,36 +16,95 @@
   <button class="tab" data-panel="order">注文</button>
 </div>
 
+<!-- ================================================================= -->
+<!-- ユーザー管理 -->
+<!-- ================================================================= -->
 <div id="panel-users" class="panel">
   <h2>ユーザー管理</h2>
 
-  <h3>新規登録</h3>
-  <input id="u-name" placeholder="名前">
-  <select id="u-type">
-    <option value="host">ホスト</option>
-    <option value="maid">メイド</option>
-  </select>
-  <input type="file" id="u-icon">
-  <button id="u-save">登録</button>
+  <div id="admin-lock-users" class="admin-lock">
+    <p>管理パスワードを入力してください</p>
+    <input id="admin-pass-users" type="password" placeholder="password">
+    <button id="unlock-users">認証</button>
+  </div>
 
-  <h3>登録済みユーザー</h3>
-  <div id="u-list"></div>
+  <div id="users-content" class="hidden">
+    <h3>新規登録</h3>
+    <input id="u-name" placeholder="名前">
+    <select id="u-type">
+      <option value="host">ホスト</option>
+      <option value="maid">メイド</option>
+    </select>
+    <input type="file" id="u-icon">
+    <button id="u-save">登録</button>
+
+    <h3>登録済みユーザー</h3>
+    <div id="u-list"></div>
+  </div>
 </div>
 
+<!-- ================================================================= -->
+<!-- シフト（ホスト） -->
+<!-- ================================================================= -->
+<div id="panel-shift-host" class="panel">
+  <h2>シフト(ホスト)</h2>
+  <div id="sh-host"></div>
+</div>
 
-<div id="panel-shift-host" class="panel"><h2>シフト(ホスト)</h2><div id="sh-host"></div></div>
-<div id="panel-shift-maid" class="panel"><h2>シフト(メイド)</h2><div id="sh-maid"></div></div>
+<div id="panel-shift-maid" class="panel">
+  <h2>シフト(メイド)</h2>
+  <div id="sh-maid"></div>
+</div>
 
+<!-- ================================================================= -->
+<!-- メニュー管理 -->
+<!-- ================================================================= -->
 <div id="panel-menu" class="panel">
-<h2>メニュー管理</h2>
-<input id="m-user" placeholder="ユーザーID">
-<input id="m-name" placeholder="商品名">
-<input id="m-price" placeholder="値段">
-<input id="m-desc" placeholder="概要">
-<button id="m-save">登録</button>
-<div id="m-list"></div>
+  <h2>メニュー管理</h2>
+
+  <div id="admin-lock-menu" class="admin-lock">
+    <p>管理パスワードを入力してください</p>
+    <input id="admin-pass-menu" type="password" placeholder="password">
+    <button id="unlock-menu">認証</button>
+  </div>
+
+  <div id="menu-content" class="hidden">
+    <h3>メニュー登録</h3>
+
+    <label>対象</label><br>
+    <select id="menu-type-select">
+      <option value="host">ホスト</option>
+      <option value="maid">メイド</option>
+    </select>
+    <br><br>
+
+    <label>ユーザー</label><br>
+    <select id="menu-user-select"></select><br><br>
+
+    <input id="m-name" placeholder="商品名">
+    <input id="m-price" placeholder="値段">
+    <input id="m-desc" placeholder="概要">
+    <button id="m-save">登録</button>
+
+    <h3>登録済メニュー</h3>
+    <div id="m-list"></div>
+  </div>
 </div>
 
-<div id="panel-order" class="panel"><h2>注文</h2><div id="order-area">予約枠から遷移</div></div>
+<!-- ================================================================= -->
+<!-- 注文画面 -->
+<!-- ================================================================= -->
+<div id="panel-order" class="panel">
+  <h2>注文</h2>
+  <button id="order-finish">対応終了</button>
 
-<script src="script.js"></script></body></html>
+  <h3>注文履歴</h3>
+  <div id="order-log" class="order-box"></div>
+
+  <h3>メニュー</h3>
+  <div id="order-menu-list" class="order-box"></div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
