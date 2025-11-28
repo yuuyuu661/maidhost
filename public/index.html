@@ -12,12 +12,12 @@
 <div id="tabs">
   <button class="tab" data-tab="shift-host">シフト(ホスト)</button>
   <button class="tab" data-tab="shift-maid">シフト(メイド)</button>
-  <button class="tab" data-tab="menu">メニュー</button>
-  <button class="tab" data-tab="users">ユーザー</button>
-  <button class="tab" data-tab="orders">注文</button>
+  <button class="tab adminOnlyTab" data-require-admin="true" data-tab="menu">メニュー</button>
+  <button class="tab adminOnlyTab" data-require-admin="true" data-tab="users">ユーザー</button>
+  <button class="tab adminOnlyTab" data-require-admin="true" data-tab="orders">注文</button>
 </div>
 
-<!-- ▼ 管理者認証パネル（全タブ共通で1回だけ） -->
+<!-- ▼ 管理パスワードポップアップ -->
 <div id="authPanel" class="popup-bg hidden">
   <div class="popup">
     <h3>管理パスワードを入力</h3>
@@ -27,7 +27,7 @@
 </div>
 
 <!-- ▼ シフト（ホスト） -->
-<div id="shift-host" class="panel hidden">
+<div id="shift-host" class="panel">
   <h2>シフト（ホスト）</h2>
   <div id="shiftHostTable"></div>
 </div>
@@ -42,19 +42,16 @@
 <div id="menu" class="panel hidden">
   <h2>メニュー管理</h2>
 
-  <div class="adminOnly">
-    <h3>メニュー登録</h3>
-    <label>対象</label>
-    <select id="menuType">
-      <option value="host">ホスト用</option>
-      <option value="maid">メイド用</option>
-    </select><br>
+  <h3>メニュー登録</h3>
+  <select id="menuType">
+    <option value="host">ホスト用</option>
+    <option value="maid">メイド用</option>
+  </select><br>
 
-    <input id="menuName" placeholder="商品名"><br>
-    <input id="menuPrice" type="number" placeholder="値段"><br>
-    <input id="menuDesc" placeholder="概要"><br>
-    <button id="menuRegister">登録</button>
-  </div>
+  <input id="menuName" placeholder="商品名"><br>
+  <input id="menuPrice" type="number" placeholder="値段（rrc）"><br>
+  <input id="menuDesc" placeholder="概要"><br>
+  <button id="menuRegister">登録</button>
 
   <h3>登録済みメニュー</h3>
   <div id="menuList"></div>
@@ -64,35 +61,33 @@
 <div id="users" class="panel hidden">
   <h2>ユーザー管理</h2>
 
-  <div class="adminOnly">
-    <h3>ユーザー登録</h3>
-    <select id="userType">
-      <option value="host">ホスト</option>
-      <option value="maid">メイド</option>
-    </select><br>
-    <input id="userName" placeholder="名前"><br>
-    <input id="userIcon" type="file"><br>
-    <button id="userRegister">登録</button>
-  </div>
+  <h3>登録</h3>
+  <select id="userType">
+    <option value="host">ホスト</option>
+    <option value="maid">メイド</option>
+  </select><br>
+  <input id="userName" placeholder="名前"><br>
+  <input id="userIcon" type="file"><br>
+  <button id="userRegister">登録</button>
 
   <h3>登録済みユーザー</h3>
   <div id="userList"></div>
 </div>
 
-<!-- ▼ 注文（予約枠から来る） -->
+<!-- ▼ 注文画面 -->
 <div id="orders" class="panel hidden">
   <h2>注文</h2>
 
-  <div id="orderContainer">
-    <button id="finishOrder">対応終了</button>
+  <button id="finishOrder">対応終了</button>
 
-    <h3>注文履歴</h3>
-    <div id="orderLog"></div>
-    <div id="orderSum"></div>
+  <h3>注文履歴</h3>
+  <div id="orderLog"></div>
 
-    <h3>メニュー</h3>
-    <div id="orderMenu"></div>
-  </div>
+  <h3>合計</h3>
+  <div id="orderSum"></div>
+
+  <h3>メニュー</h3>
+  <div id="orderMenu"></div>
 </div>
 
 <script src="script.js"></script>
