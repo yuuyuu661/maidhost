@@ -6,69 +6,82 @@ import fs from "fs";
 import path from "path";
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
+if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
+
 const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
-/* -------------------------------
-   DB自動生成（users / shifts / menus / orders）
--------------------------------- */
-const initSQL = `
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  name TEXT,
-  type TEXT,
-  icon_url TEXT
-);
-CREATE TABLE IF NOT EXISTS shifts (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER,
-  date TEXT,
-  time_slot INTEGER,
-  status TEXT,
-  reserved_name TEXT
-);
-CREATE TABLE IF NOT EXISTS menus (
-  id SERIAL PRIMARY KEY,
-  name TEXT,
-  price INTEGER,
-  description TEXT,
-  type TEXT
-);
-CREATE TABLE IF NOT EXISTS orders (
-  id SERIAL PRIMARY KEY,
-  date TEXT,
-  shift_type TEXT,
-  slot INTEGER,
-  item_name TEXT,
-  price INTEGER
-);
-`;
+/* -------------------------------------
+   DB 初期化（自動生成・手動SQL不要）
+------------------------------------- */
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      icon_url TEXT
+    );
+  `);
 
-(async () => {
-  try {
-    await pool.query(initSQL);
-    console.log("Tables OK");
-  } catch (e) {
-    console.error("Init error:", e);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS shifts (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER,
+      date TEXT,
+      time_slot INTEGER,
+      status TEXT,
+      reserved_name TEXT
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS menus (
+      id SERIAL PRIMARY KEY,
+      name TEXT,
+      price INTEGER,
+      description TEXT,
+      type TEXT
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      date TEXT,
+      type TEXT,
+      slot INTEGER,
+      name TEXT,
+      price INTEGER
+    );
+  `);
+
+  // default.png を public に作成
+  if (!fs.existsSync("public/default.png")) {
+    fs.writeFileSync("public/default.png", Buffer.from([137,80,78,71]));
   }
-})();
+}
 
-/* -------------------------------
-   ユーザー管理
--------------------------------- */
-app.post("/api/users", multer({ dest: "uploads/" }).single("icon"), async (req, res) => {
+initDB();
+
+/* -------------------------------------
+   ユーザー登録
+------------------------------------- */
+const upload = multer({ dest: "uploads/" });
+
+app.post("/api/users", upload.single("icon"), async (req, res) => {
   const { name, type } = req.body;
-  const icon = req.file ? "/uploads/" + req.file.filename : null;
+  const icon = req.file ? "/uploads/" + req.file.filename : "/default.png";
 
   await pool.query(
-    `INSERT INTO users (name,type,icon_url) VALUES ($1,$2,$3)`,
+    `INSERT INTO users (name, type, icon_url) VALUES ($1,$2,$3)`,
     [name, type, icon]
   );
 
@@ -88,9 +101,9 @@ app.delete("/api/users/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
-/* -------------------------------
+/* -------------------------------------
    シフト読み込み
--------------------------------- */
+------------------------------------- */
 app.get("/api/shifts", async (req, res) => {
   const { type, date } = req.query;
 
@@ -104,43 +117,44 @@ app.get("/api/shifts", async (req, res) => {
     [date]
   );
 
-  res.json({ users: users.rows, shifts: shifts.rows });
+  // 合計金額（orders）
+  const orders = await pool.query(
+    `SELECT * FROM orders WHERE date=$1`,
+    [date]
+  );
+
+  res.json({
+    users: users.rows,
+    shifts: shifts.rows,
+    orders: orders.rows
+  });
 });
 
-/* -------------------------------
-   シフト更新 API（今回の本命）
--------------------------------- */
+/* -------------------------------------
+   シフト更新
+------------------------------------- */
 app.post("/api/shifts/update", async (req, res) => {
   const { user_id, date, time_slot, status, reserved_name } = req.body;
 
-  // 既存レコードあるか？
-  const q = await pool.query(
-    `SELECT * FROM shifts WHERE user_id=$1 AND date=$2 AND time_slot=$3`,
+  await pool.query(
+    `DELETE FROM shifts WHERE user_id=$1 AND date=$2 AND time_slot=$3`,
     [user_id, date, time_slot]
   );
 
-  if (q.rows.length === 0) {
-    // 新規作成
+  if (status !== "empty") {
     await pool.query(
       `INSERT INTO shifts (user_id,date,time_slot,status,reserved_name)
        VALUES ($1,$2,$3,$4,$5)`,
       [user_id, date, time_slot, status, reserved_name]
-    );
-  } else {
-    // 更新
-    await pool.query(
-      `UPDATE shifts SET status=$1,reserved_name=$2
-       WHERE user_id=$3 AND date=$4 AND time_slot=$5`,
-      [status, reserved_name, user_id, date, time_slot]
     );
   }
 
   res.json({ ok: true });
 });
 
-/* -------------------------------
+/* -------------------------------------
    メニュー
--------------------------------- */
+------------------------------------- */
 app.post("/api/menu", async (req, res) => {
   const { name, price, description, type } = req.body;
 
@@ -161,55 +175,38 @@ app.get("/api/menu", async (req, res) => {
   res.json(q.rows);
 });
 
-/* ---- メニュー削除API（新規追加） ---- */
 app.delete("/api/menu/:id", async (req, res) => {
   await pool.query(`DELETE FROM menus WHERE id=$1`, [req.params.id]);
   res.json({ ok: true });
 });
 
-/* -------------------------------
-   注文（履歴はDBへ保存）
--------------------------------- */
-app.post("/api/orders/add", async (req, res) => {
-  const { date, shift_type, slot, name, price } = req.body;
+/* -------------------------------------
+   注文処理
+------------------------------------- */
+app.post("/api/order/add", async (req, res) => {
+  const { date, type, slot, name, price } = req.body;
 
   await pool.query(
-    `INSERT INTO orders (date,shift_type,slot,item_name,price)
+    `INSERT INTO orders (date,type,slot,name,price)
      VALUES ($1,$2,$3,$4,$5)`,
-    [date, shift_type, slot, name, price]
+    [date, type, slot, name, price]
   );
 
   res.json({ ok: true });
 });
 
-app.get("/api/orders", async (req, res) => {
-  const { date, shift_type, slot } = req.query;
-
-  const q = await pool.query(
-    `SELECT * FROM orders 
-     WHERE date=$1 AND shift_type=$2 AND slot=$3
-     ORDER BY id`,
-    [date, shift_type, slot]
-  );
-  res.json(q.rows);
-});
-
-app.delete("/api/orders/clear", async (req, res) => {
-  const { date, shift_type, slot } = req.query;
-
-  await pool.query(
-    `DELETE FROM orders WHERE date=$1 AND shift_type=$2 AND slot=$3`,
-    [date, shift_type, slot]
-  );
-
+app.delete("/api/order/:id", async (req, res) => {
+  await pool.query(`DELETE FROM orders WHERE id=$1`, [req.params.id]);
   res.json({ ok: true });
 });
 
-/* -------------------------------
-   index
--------------------------------- */
+/* -------------------------------------
+   index.html
+------------------------------------- */
 app.get("/", (req, res) => {
   res.sendFile(path.resolve("public/index.html"));
 });
 
-app.listen(process.env.PORT || 3000, () => console.log("Server Started"));
+app.listen(process.env.PORT || 3000, () =>
+  console.log("Server Started")
+);
