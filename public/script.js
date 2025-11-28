@@ -1,4 +1,70 @@
 /*************************************************
+ * ユーザー登録処理
+ *************************************************/
+async function loadUsersList() {
+  const hostRes = await fetch(`/api/users?type=host`);
+  const maidRes = await fetch(`/api/users?type=maid`);
+  const hosts = await hostRes.json();
+  const maids = await maidRes.json();
+
+  const box = document.getElementById("u-list");
+  box.innerHTML = `
+    <h4>ホスト</h4>
+    ${hosts.map(u => `<div>・${u.name}</div>`).join("")}
+
+    <h4>メイド</h4>
+    ${maids.map(u => `<div>・${u.name}</div>`).join("")}
+  `;
+}
+
+// 初期表示用
+loadUsersList();
+
+/*************************************************
+ * ユーザー登録ボタン
+ *************************************************/
+document.getElementById("u-save").onclick = async () => {
+  const name = document.getElementById("u-name").value;
+  const type = document.getElementById("u-type").value;
+  const file = document.getElementById("u-icon").files[0];
+
+  if (!name) {
+    alert("名前を入力してください");
+    return;
+  }
+  if (!file) {
+    alert("アイコン画像を選択してください");
+    return;
+  }
+
+  const fd = new FormData();
+  fd.append("name", name);
+  fd.append("type", type);
+  fd.append("icon", file);
+
+  const res = await fetch("/api/users", {
+    method: "POST",
+    body: fd
+  }).then(r => r.json());
+
+  if (!res.ok) {
+    alert("登録に失敗しました");
+    return;
+  }
+
+  alert("登録完了！");
+  document.getElementById("u-name").value = "";
+  document.getElementById("u-icon").value = "";
+
+  // ① ユーザー一覧を更新
+  loadUsersList();
+
+  // ② 予定表に即反映
+  loadShift("host");
+  loadShift("maid");
+};
+
+/*************************************************
  * タブ切り替え
  *************************************************/
 document.querySelectorAll('.tab').forEach(btn => {
