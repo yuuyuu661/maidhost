@@ -45,8 +45,14 @@ function switchTab(name) {
   if (name === "shift-host") loadShift("host", false);
   if (name === "shift-maid") loadShift("maid", false);
 
-  if (name === "admin-shift-host") loadShift("host", true);
-  if (name === "admin-shift-maid") loadShift("maid", true);
+if (name.startsWith("admin-")) {
+    if (!adminOK) {
+        showAuth();
+        return;
+    }
+    if (name === "admin-shift-host") loadShift("host", true);
+    if (name === "admin-shift-maid") loadShift("maid", true);
+}
 
   if (name === "users") loadUserList();
   if (name === "menu") loadMenuList();
