@@ -1,0 +1,162 @@
+/* ------------------------------------
+   全体レイアウト
+------------------------------------ */
+body {
+  font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+  padding: 10px;
+  background: #fafafa;
+  margin: 0;
+}
+
+h2, h3 {
+  margin: 10px 0;
+}
+
+/* ------------------------------------
+   タブ
+------------------------------------ */
+#tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.tab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  font-size: 15px;
+  background: #eee;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tab:hover {
+  background: #ddd;
+}
+
+.panel {
+  padding: 10px;
+}
+
+.hidden {
+  display: none;
+}
+
+/* ------------------------------------
+   シフト表
+------------------------------------ */
+.shiftTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.shiftTable th,
+.shiftTable td {
+  border: 1px solid #ccc;
+  padding: 6px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.icon {
+  width: 60px;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* ------------------------------------
+   注文ボタン
+------------------------------------ */
+.orderBtn {
+  margin-top: 4px;
+  padding: 4px 10px;
+  font-size: 13px;
+  border: none;
+  border-radius: 4px;
+  background: #4caf50;
+  color: white;
+  cursor: pointer;
+}
+
+.orderBtn:hover {
+  background: #449b49;
+}
+
+/* ------------------------------------
+   メニューアイテム
+------------------------------------ */
+.menuItem {
+  padding: 6px;
+  border-bottom: 1px solid #ddd;
+}
+
+.addOrder {
+  padding: 4px 8px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.addOrder:hover {
+  background: #006ee0;
+}
+
+/* ------------------------------------
+   注文履歴
+------------------------------------ */
+.historyRow {
+  border-bottom: 1px solid #ccc;
+  padding: 6px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.delOrder {
+  padding: 4px 8px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.delOrder:hover {
+  background: #d63829;
+}
+
+/* ------------------------------------
+   スマホ最適化
+------------------------------------ */
+@media (max-width: 600px) {
+  .icon {
+    width: 40px;
+  }
+
+  .tab {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .shiftTable th,
+  .shiftTable td {
+    padding: 4px;
+    font-size: 11px;
+  }
+
+  .orderBtn {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+
+  .addOrder,
+  .delOrder {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+}
