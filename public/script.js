@@ -1,80 +1,73 @@
 /* -----------------------------
    初期設定
 ----------------------------- */
-let editingShift = null;
-let orderLog = [];
+let currentTab = "shift-host";
+let currentOrderShift = null;   // 現在操作中のシフト
+let orderLog = [];              // 現在の注文内容（クリアしない仕組み）
+let lastLoadedShift = null;     // orders タブ用：どのシフトか記録
 
 /* -----------------------------
-   読み込み後 初期タブ表示
+   初期表示
 ----------------------------- */
 window.onload = () => {
   switchTab("shift-host");
 };
 
 /* -----------------------------
-   タブクリック処理
+   タブ切り替え
 ----------------------------- */
 document.querySelectorAll(".tab").forEach(btn => {
   btn.addEventListener("click", () => {
-    const tab = btn.dataset.tab;
-    switchTab(tab);
+    switchTab(btn.dataset.tab);
   });
 });
 
-/* -----------------------------
-   タブ切り替え
------------------------------ */
 function switchTab(name) {
+  currentTab = name;
+
   document.querySelectorAll(".panel").forEach(p => p.classList.add("hidden"));
   document.getElementById(name).classList.remove("hidden");
 
-  if (name === "shift-host") loadShift("host", false);
-  if (name === "shift-maid") loadShift("maid", false);
+  if (name === "shift-host") loadShift("host");
+  if (name === "shift-maid") loadShift("maid");
 
-  if (name === "admin-shift-host") loadShift("host", true);
-  if (name === "admin-shift-maid") loadShift("maid", true);
-
-  if (name === "users") loadUserList();
   if (name === "menu") loadMenuList();
+  if (name === "users") loadUserList();
+
+  if (name === "orders") {
+    loadOrderHistory();
+    loadOrderMenu();
+    renderOrderLog();
+  }
 }
 
 /* -----------------------------
    シフト読み込み
 ----------------------------- */
-function loadShift(type, admin) {
-  const date = new Date().toISOString().slice(0,10);
+function loadShift(type) {
+  const date = new Date().toISOString().slice(0, 10);
 
   fetch(`/api/shifts?type=${type}&date=${date}`)
     .then(r => r.json())
-    .then(data => renderShift(type, data, admin))
-    .catch(e => console.error("shift load error", e));
+    .then(data => renderShift(type, data));
 }
 
-/* -----------------------------
-   シフト描画
------------------------------ */
-function renderShift(type, data, adminMode) {
-  const target = adminMode
-    ? (type === "host"
-      ? document.getElementById("adminShiftHostTable")
-      : document.getElementById("adminShiftMaidTable"))
-    : (type === "host"
+function renderShift(type, data) {
+  const target =
+    type === "host"
       ? document.getElementById("shiftHostTable")
-      : document.getElementById("shiftMaidTable"));
+      : document.getElementById("shiftMaidTable");
 
   const times = [
-    "20:00-20:30","20:30-21:00","21:00-21:30",
-    "21:30-22:00","22:00-22:30","22:30-23:00"
+    "20:00-20:30", "20:30-21:00", "21:00-21:30",
+    "21:30-22:00", "22:00-22:30", "22:30-23:00"
   ];
 
   let html = `<table class="shiftTable"><tr><th>${new Date().toLocaleDateString()}</th>`;
 
   data.users.forEach(u => {
     const icon = u.icon_url || "/default.png";
-    html += `<th>
-      <img src="${icon}" class="icon" onerror="this.src='/default.png'">
-      <br>${u.name}
-    </th>`;
+    html += `<th><img src="${icon}" class="icon"><br>${u.name}</th>`;
   });
 
   html += "</tr>";
@@ -84,6 +77,7 @@ function renderShift(type, data, adminMode) {
 
     data.users.forEach(u => {
       const cell = data.shifts.find(s => s.user_id === u.id && s.time_slot === i);
+
       let bg = "#d8f5d0";
       let text = "";
 
@@ -92,103 +86,111 @@ function renderShift(type, data, adminMode) {
           bg = "#fff6a8";
           text = `${cell.reserved_name}`;
 
-          if (adminMode) {
-            text += `<br><button class="orderBtn" data-type="${type}" data-user="${u.id}" data-slot="${i}">注文</button>`;
+          // 金額があるならここに表示
+          if (cell.amount && cell.amount > 0) {
+            text += `<br><b>${cell.amount} rrc</b>`;
           }
 
+          // 予約済みなら注文ボタン表示
+          text += `<br><button class="orderBtn" data-type="${type}" data-slot="${i}" data-user="${u.id}">
+                      注文
+                   </button>`;
         } else if (cell.status === "busy") {
           bg = "#f6b0b0";
           text = "X";
         }
       }
 
-      html += `<td style="background:${bg}" class="cell" data-user="${u.id}" data-slot="${i}">${text}</td>`;
+      html += `<td class="cell" style="background:${bg}"
+               data-user="${u.id}"
+               data-slot="${i}"
+               data-type="${type}">
+               ${text}
+               </td>`;
     });
 
     html += "</tr>";
   });
 
   html += "</table>";
-
   target.innerHTML = html;
 
-  /* -----------------------------
-     一般モード：クリックで編集
-  ----------------------------- */
-  if (!adminMode) {
-    document.querySelectorAll(".cell").forEach(cell => {
-      cell.onclick = () => editShift(type, cell);
-    });
-  }
+  // セル編集（状態変更）
+  document.querySelectorAll(".cell").forEach(cell => {
+    cell.onclick = () => editShift(cell);
+  });
 
-  /* -----------------------------
-     管理モード：注文ボタンのみ
-  ----------------------------- */
-  if (adminMode) {
-    document.querySelectorAll(".orderBtn").forEach(btn => {
-      btn.onclick = () => {
-        editingShift = btn.dataset;
-        switchTab("orders");
-        loadOrderMenu();
+  // 注文ボタン
+  document.querySelectorAll(".orderBtn").forEach(btn => {
+    btn.onclick = () => {
+      currentOrderShift = {
+        type: btn.dataset.type,
+        slot: Number(btn.dataset.slot),
+        user: Number(btn.dataset.user)
       };
-    });
-  }
+      lastLoadedShift = currentOrderShift;
+      switchTab("orders");
+    };
+  });
 }
 
 /* -----------------------------
-   シフト編集（一般モード）
+   シフト編集
 ----------------------------- */
-function editShift(type, cell) {
+function editShift(cell) {
   const user = cell.dataset.user;
-  const slot = cell.dataset.slot;
+  const slot = Number(cell.dataset.slot);
+  const type = cell.dataset.type;
+  const date = new Date().toISOString().slice(0, 10);
 
-  let newStatus;
   const bg = cell.style.background;
 
-  if (bg === "rgb(216, 245, 208)") newStatus = "reserved";
-  else if (bg === "rgb(255, 246, 168)") newStatus = "busy";
-  else newStatus = "empty";
+  let newStatus = "";
+  let reserved = "";
 
-  let reservedName = "";
-
-  if (newStatus === "reserved") {
-    reservedName = prompt("予約者名を入力してください");
-    if (!reservedName) return;
+  // 状態切替：空 → 予約 → X → 空
+  if (bg === "rgb(216, 245, 208)") {
+    newStatus = "reserved";
+    reserved = prompt("予約者名を入力してください");
+    if (!reserved) return;
+  } else if (bg === "rgb(255, 246, 168)") {
+    newStatus = "busy";
+  } else {
+    newStatus = "empty";
   }
 
-  updateShift(user, type, slot, newStatus, reservedName);
-}
-
-function updateShift(user_id, type, slot, status, reserved_name) {
-  const date = new Date().toISOString().slice(0,10);
-
-  fetch(`/api/shifts/update`, {
+  fetch("/api/shifts/update", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      user_id,
+      user_id: user,
       date,
-      time_slot: Number(slot),
-      status,
-      reserved_name
+      time_slot: slot,
+      status: newStatus,
+      reserved_name: reserved
     })
-  }).then(() => loadShift(type, false));
+  }).then(() => loadShift(type));
 }
 
 /* -----------------------------
-   注文機能
+   メニュー読み込み
 ----------------------------- */
 function loadOrderMenu() {
-  fetch(`/api/menu?type=${editingShift.type}`)
+  if (!lastLoadedShift) return;
+
+  fetch(`/api/menu?type=${lastLoadedShift.type}`)
     .then(r => r.json())
     .then(list => {
       let html = "";
       list.forEach(m => {
         html += `
-          <div>
-            ${m.name} (${m.price} rrc)
-            <button class="addOrder" data-name="${m.name}" data-price="${m.price}">追加</button>
-          </div>`;
+          <div class="menuItem">
+            ${m.name}（${m.price}）
+            <button class="addOrder" data-name="${m.name}" data-price="${m.price}">
+              追加
+            </button>
+          </div>
+        `;
       });
 
       document.getElementById("orderMenu").innerHTML = html;
@@ -199,6 +201,9 @@ function loadOrderMenu() {
     });
 }
 
+/* -----------------------------
+   注文追加
+----------------------------- */
 function addOrder(d) {
   orderLog.push({
     name: d.name,
@@ -207,12 +212,15 @@ function addOrder(d) {
   renderOrderLog();
 }
 
+/* -----------------------------
+   注文リスト表示
+----------------------------- */
 function renderOrderLog() {
   let html = "";
   let sum = 0;
 
   orderLog.forEach(o => {
-    html += `${o.name} x1 = ${o.price}<br>`;
+    html += `${o.name} ＝ ${o.price} rrc<br>`;
     sum += o.price;
   });
 
@@ -220,10 +228,14 @@ function renderOrderLog() {
   document.getElementById("orderSum").innerHTML = `<b>${sum} rrc</b>`;
 }
 
+/* -----------------------------
+   対応終了（注文保存）
+   → 注文ログはクリアしない！！
+----------------------------- */
 document.getElementById("finishOrder").onclick = () => {
-  if (!editingShift) return;
+  if (!lastLoadedShift || orderLog.length === 0) return;
 
-  const date = new Date().toISOString().slice(0,10);
+  const date = new Date().toISOString().slice(0, 10);
   const sum = orderLog.reduce((a, b) => a + b.price, 0);
 
   fetch("/api/orders/finish", {
@@ -231,17 +243,50 @@ document.getElementById("finishOrder").onclick = () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       date,
-      type: editingShift.type,
-      slot: editingShift.slot,
+      type: lastLoadedShift.type,
+      slot: lastLoadedShift.slot,
       list: orderLog,
       sum
     })
+  }).then(() => {
+    alert("保存しました！");
+    loadOrderHistory();  // 共通履歴リロード
+    loadShift(lastLoadedShift.type); // 予定表に金額表示
   });
-
-  alert("保存しました！");
-  orderLog = [];
-  switchTab("admin-shift-" + editingShift.type);
 };
+
+/* -----------------------------
+   注文履歴（共通）
+----------------------------- */
+function loadOrderHistory() {
+  fetch("/api/orders/all")
+    .then(r => r.json())
+    .then(list => {
+      let html = "";
+      list.forEach(o => {
+        html += `
+          <div class="historyRow">
+            ${o.date} / ${o.type} / ${o.slot} コマ
+            <b>${o.total} rrc</b>
+            <button class="delOrder" data-id="${o.id}">削除</button>
+          </div>
+        `;
+      });
+
+      document.getElementById("orderHistory").innerHTML = html;
+
+      document.querySelectorAll(".delOrder").forEach(btn => {
+        btn.onclick = () => deleteOrder(btn.dataset.id);
+      });
+    });
+}
+
+function deleteOrder(id) {
+  if (!confirm("削除しますか？")) return;
+
+  fetch(`/api/orders/${id}`, { method: "DELETE" })
+    .then(() => loadOrderHistory());
+}
 
 /* -----------------------------
    ユーザー管理
@@ -298,12 +343,7 @@ document.getElementById("menuRegister").onclick = () => {
   fetch("/api/menu", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name,
-      price,
-      description: desc,
-      type
-    })
+    body: JSON.stringify({ name, price, description: desc, type })
   }).then(() => loadMenuList());
 };
 
