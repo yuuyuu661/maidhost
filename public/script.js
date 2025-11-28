@@ -1,0 +1,323 @@
+/* -----------------------------
+   初期設定
+----------------------------- */
+let editingShift = null;
+let orderLog = [];
+
+/* -----------------------------
+   読み込み後 初期タブ表示
+----------------------------- */
+window.onload = () => {
+  switchTab("shift-host");
+};
+
+/* -----------------------------
+   タブクリック処理
+----------------------------- */
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.tab;
+    switchTab(tab);
+  });
+});
+
+/* -----------------------------
+   タブ切り替え
+----------------------------- */
+function switchTab(name) {
+  document.querySelectorAll(".panel").forEach(p => p.classList.add("hidden"));
+  document.getElementById(name).classList.remove("hidden");
+
+  if (name === "shift-host") loadShift("host", false);
+  if (name === "shift-maid") loadShift("maid", false);
+
+  if (name === "admin-shift-host") loadShift("host", true);
+  if (name === "admin-shift-maid") loadShift("maid", true);
+
+  if (name === "users") loadUserList();
+  if (name === "menu") loadMenuList();
+}
+
+/* -----------------------------
+   シフト読み込み
+----------------------------- */
+function loadShift(type, admin) {
+  const date = new Date().toISOString().slice(0,10);
+
+  fetch(`/api/shifts?type=${type}&date=${date}`)
+    .then(r => r.json())
+    .then(data => renderShift(type, data, admin))
+    .catch(e => console.error("shift load error", e));
+}
+
+/* -----------------------------
+   シフト描画
+----------------------------- */
+function renderShift(type, data, adminMode) {
+  const target = adminMode
+    ? (type === "host"
+      ? document.getElementById("adminShiftHostTable")
+      : document.getElementById("adminShiftMaidTable"))
+    : (type === "host"
+      ? document.getElementById("shiftHostTable")
+      : document.getElementById("shiftMaidTable"));
+
+  const times = [
+    "20:30-20:50","20:50-21:10","21:10-21:30",
+    "21:30-21:50","21:50-22:10","22:10-22:30"
+  ];
+
+  let html = `<table class="shiftTable"><tr><th>${new Date().toLocaleDateString()}</th>`;
+
+  data.users.forEach(u => {
+    const icon = u.icon_url || "/default.png";
+    html += `<th>
+      <img src="${icon}" class="icon" onerror="this.src='/default.png'">
+      <br>${u.name}
+    </th>`;
+  });
+
+  html += "</tr>";
+
+  times.forEach((slot, i) => {
+    html += `<tr><td>${slot}</td>`;
+
+    data.users.forEach(u => {
+      const cell = data.shifts.find(s => s.user_id === u.id && s.time_slot === i);
+      let bg = "#d8f5d0";
+      let text = "";
+
+      if (cell) {
+        if (cell.status === "reserved") {
+          bg = "#fff6a8";
+          text = `${cell.reserved_name}`;
+
+          if (adminMode) {
+            text += `<br><button class="orderBtn" data-type="${type}" data-user="${u.id}" data-slot="${i}">注文</button>`;
+          }
+
+        } else if (cell.status === "busy") {
+          bg = "#f6b0b0";
+          text = "X";
+        }
+      }
+
+      html += `<td style="background:${bg}" class="cell" data-user="${u.id}" data-slot="${i}">${text}</td>`;
+    });
+
+    html += "</tr>";
+  });
+
+  html += "</table>";
+
+  target.innerHTML = html;
+
+  /* -----------------------------
+     一般モード：クリックで編集
+  ----------------------------- */
+  if (!adminMode) {
+    document.querySelectorAll(".cell").forEach(cell => {
+      cell.onclick = () => editShift(type, cell);
+    });
+  }
+
+  /* -----------------------------
+     管理モード：注文ボタンのみ
+  ----------------------------- */
+  if (adminMode) {
+    document.querySelectorAll(".orderBtn").forEach(btn => {
+      btn.onclick = () => {
+        editingShift = btn.dataset;
+        switchTab("orders");
+        loadOrderMenu();
+      };
+    });
+  }
+}
+
+/* -----------------------------
+   シフト編集（一般モード）
+----------------------------- */
+function editShift(type, cell) {
+  const user = cell.dataset.user;
+  const slot = cell.dataset.slot;
+
+  let newStatus;
+  const bg = cell.style.background;
+
+  if (bg === "rgb(216, 245, 208)") newStatus = "reserved";
+  else if (bg === "rgb(255, 246, 168)") newStatus = "busy";
+  else newStatus = "empty";
+
+  let reservedName = "";
+
+  if (newStatus === "reserved") {
+    reservedName = prompt("予約者名を入力してください");
+    if (!reservedName) return;
+  }
+
+  updateShift(user, type, slot, newStatus, reservedName);
+}
+
+function updateShift(user_id, type, slot, status, reserved_name) {
+  const date = new Date().toISOString().slice(0,10);
+
+  fetch(`/api/shifts/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id,
+      date,
+      time_slot: Number(slot),
+      status,
+      reserved_name
+    })
+  }).then(() => loadShift(type, false));
+}
+
+/* -----------------------------
+   注文機能
+----------------------------- */
+function loadOrderMenu() {
+  fetch(`/api/menu?type=${editingShift.type}`)
+    .then(r => r.json())
+    .then(list => {
+      let html = "";
+      list.forEach(m => {
+        html += `
+          <div>
+            ${m.name} (${m.price} rrc)
+            <button class="addOrder" data-name="${m.name}" data-price="${m.price}">追加</button>
+          </div>`;
+      });
+
+      document.getElementById("orderMenu").innerHTML = html;
+
+      document.querySelectorAll(".addOrder").forEach(btn => {
+        btn.onclick = () => addOrder(btn.dataset);
+      });
+    });
+}
+
+function addOrder(d) {
+  orderLog.push({
+    name: d.name,
+    price: Number(d.price)
+  });
+  renderOrderLog();
+}
+
+function renderOrderLog() {
+  let html = "";
+  let sum = 0;
+
+  orderLog.forEach(o => {
+    html += `${o.name} x1 = ${o.price}<br>`;
+    sum += o.price;
+  });
+
+  document.getElementById("orderLog").innerHTML = html;
+  document.getElementById("orderSum").innerHTML = `<b>${sum} rrc</b>`;
+}
+
+document.getElementById("finishOrder").onclick = () => {
+  if (!editingShift) return;
+
+  const date = new Date().toISOString().slice(0,10);
+  const sum = orderLog.reduce((a, b) => a + b.price, 0);
+
+  fetch("/api/orders/finish", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      date,
+      type: editingShift.type,
+      slot: editingShift.slot,
+      list: orderLog,
+      sum
+    })
+  });
+
+  alert("保存しました！");
+  orderLog = [];
+  switchTab("admin-shift-" + editingShift.type);
+};
+
+/* -----------------------------
+   ユーザー管理
+----------------------------- */
+document.getElementById("userRegister").onclick = () => {
+  const name = document.getElementById("userName").value;
+  const type = document.getElementById("userType").value;
+  const icon = document.getElementById("userIcon").files[0];
+
+  if (!name || !icon) return alert("入力不足");
+
+  const fd = new FormData();
+  fd.append("name", name);
+  fd.append("type", type);
+  fd.append("icon", icon);
+
+  fetch("/api/users", { method: "POST", body: fd })
+    .then(() => loadUserList());
+};
+
+function loadUserList() {
+  Promise.all([
+    fetch("/api/users?type=host").then(r => r.json()),
+    fetch("/api/users?type=maid").then(r => r.json())
+  ]).then(([hosts, maids]) => {
+    let html = "<h3>ホスト</h3>";
+    hosts.forEach(u => {
+      html += `${u.name} <button onclick="deleteUser(${u.id})">削除</button><br>`;
+    });
+
+    html += "<h3>メイド</h3>";
+    maids.forEach(u => {
+      html += `${u.name} <button onclick="deleteUser(${u.id})">削除</button><br>`;
+    });
+
+    document.getElementById("userList").innerHTML = html;
+  });
+}
+
+function deleteUser(id) {
+  fetch(`/api/users/${id}`, { method: "DELETE" })
+    .then(() => loadUserList());
+}
+
+/* -----------------------------
+   メニュー管理
+----------------------------- */
+document.getElementById("menuRegister").onclick = () => {
+  const name = document.getElementById("menuName").value;
+  const price = document.getElementById("menuPrice").value;
+  const desc = document.getElementById("menuDesc").value;
+  const type = document.getElementById("menuType").value;
+
+  fetch("/api/menu", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      price,
+      description: desc,
+      type
+    })
+  }).then(() => loadMenuList());
+};
+
+function loadMenuList() {
+  Promise.all([
+    fetch("/api/menu?type=host").then(r => r.json()),
+    fetch("/api/menu?type=maid").then(r => r.json())
+  ]).then(([hosts, maids]) => {
+    let html = "<h3>ホスト</h3>";
+    hosts.forEach(m => html += `${m.name} (${m.price})<br>`);
+
+    html += "<h3>メイド</h3>";
+    maids.forEach(m => html += `${m.name} (${m.price})<br>`);
+
+    document.getElementById("menuList").innerHTML = html;
+  });
+}
