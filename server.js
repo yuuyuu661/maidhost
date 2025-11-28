@@ -11,7 +11,7 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use("/public", express.static("public"));
+app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
